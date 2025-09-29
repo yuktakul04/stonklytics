@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../api'
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { auth } from "../firebase"
 
 export default function Login() {
     const [email, setEmail] = useState('')
@@ -19,10 +20,11 @@ export default function Login() {
         }
         setLoading(true)
         try {
-            await api.post('/auth/login', { email, password })
+            // 🔥 Firebase login instead of hitting Django API
+            await signInWithEmailAndPassword(auth, email, password)
             setMessage('Logged in successfully')
         } catch (err) {
-            setError(err?.response?.data?.detail || 'Login failed')
+            setError(err.message || 'Login failed')
         } finally {
             setLoading(false)
         }

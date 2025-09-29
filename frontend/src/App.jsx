@@ -1,21 +1,19 @@
-import { useEffect, useState } from 'react'
+import { Link, Route, Routes, Navigate } from 'react-router-dom'
 import './App.css'
-import { api } from './api'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
 
 function App() {
-  const [status, setStatus] = useState('loading')
-
-  useEffect(() => {
-    api
-      .get('/health')
-      .then((r) => setStatus(r.data.status))
-      .catch(() => setStatus('error'))
-  }, [])
-
   return (
     <div style={{ padding: 24, fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif' }}>
       <h1>Stonklytics</h1>
-      <p>Backend health: {status}</p>
+
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
     </div>
   )
 }

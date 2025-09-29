@@ -1,8 +1,40 @@
-env/
-
-# Python cache
+# Python / Django
 __pycache__/
+*.py[cod]
 *.pyc
-
-# SQLite database
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.coverage
+coverage.xml
 db.sqlite3
+media/
+staticfiles/
+
+# Environments
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Node / Vite / Frontend
+node_modules/
+dist/
+.vite/
+.parcel-cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

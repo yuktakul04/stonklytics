@@ -21,5 +21,6 @@ from django.http import JsonResponse
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
+    path('api/stock/', include('stock.urls')),
     path('', lambda request: JsonResponse({'message': 'Stonklytics API'})),
 ]

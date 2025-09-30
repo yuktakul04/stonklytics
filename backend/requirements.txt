@@ -3,3 +3,4 @@ Django
 django-cors-headers
 djangorestframework
 python-dotenv
+requests

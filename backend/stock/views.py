@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .services import StockDataService
 from .serializers import StockDataResponseSerializer
+from datetime import datetime
+
 
 @api_view(["GET"])
 def get_stock_data(request):
@@ -47,3 +49,46 @@ def get_stock_data(request):
             {"error": f"An error occurred: {str(e)}"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+@api_view(["GET"])
+def get_historical_data(request):
+    """
+    Fetch historical stock data using Polygon.io
+    Query params:
+        - ticker (e.g., AAPL)
+        - from (e.g., 2023-01-01)
+        - to (e.g., 2023-01-10)
+    """
+    ticker = request.GET.get('ticker', '').upper()
+    from_date = request.GET.get('from')
+    to_date = request.GET.get('to')
+
+    if not ticker or not from_date or not to_date:
+        return Response(
+            {"error": "ticker, from, and to parameters are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        polygon_service = StockDataService().polygon_service
+        raw_data = polygon_service.get_historical_prices(ticker, from_date, to_date)
+
+        results = raw_data.get("results", [])
+        if not results:
+            return Response({"message": "No data found", "ticker": ticker, "prices": []})
+
+        prices = [
+            {"date": datetime.utcfromtimestamp(day["t"] / 1000).strftime('%Y-%m-%d'), "close": day["c"]}
+            for day in results
+        ]
+
+        return Response({
+            "ticker": ticker,
+            "from": from_date,
+            "to": to_date,
+            "prices": prices,
+            "source": "polygon_api"
+        })
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

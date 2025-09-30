@@ -3,6 +3,7 @@ import os
 from django.utils import timezone
 from datetime import timedelta
 from .models import StockData
+from datetime import datetime
 
 import dotenv
 from dotenv import load_dotenv
@@ -35,6 +36,27 @@ class PolygonAPIService:
         if response.status_code == 200:
             return response.json()
         return {}
+    
+
+    def get_historical_prices(self, ticker, from_date, to_date):
+        """
+        Fetch historical price data using Polygon.io custom bars endpoint.
+        Example: https://api.polygon.io/v2/aggs/ticker/AAPL/range/1/day/2023-01-01/2023-01-10
+        """
+        url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{from_date}/{to_date}"
+        params = {
+            "adjusted": "true",
+            "sort": "asc",
+            "limit": 120,
+            "apiKey": self.api_key
+        }
+
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+
+    
+    
 
 class StockDataService:
     """Service class for managing stock data operations"""

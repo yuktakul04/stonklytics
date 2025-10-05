@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { api } from '../api'
+import Watchlist from './Watchlist'
 
 export default function Dashboard() {
     const [ticker, setTicker] = useState('')
     const [stockData, setStockData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [watchlist, setWatchlist] = useState([])
     const navigate = useNavigate()
 
     const handleSearch = async (e) => {
@@ -45,6 +47,28 @@ export default function Dashboard() {
         }
     }
 
+    const addToWatchlist = () => {
+        if (!stockData) return
+        
+        const stockToAdd = {
+            ticker: stockData.ticker,
+            name: stockData.name,
+            current_price: stockData.current_price,
+            added_at: new Date().toISOString()
+        }
+        
+        // Check if stock is already in watchlist
+        const isAlreadyInWatchlist = watchlist.some(stock => stock.ticker === stockData.ticker)
+        
+        if (!isAlreadyInWatchlist) {
+            setWatchlist(prev => [...prev, stockToAdd])
+        }
+    }
+
+    const isInWatchlist = (ticker) => {
+        return watchlist.some(stock => stock.ticker === ticker)
+    }
+
     const formatNumber = (num) => {
         if (num === null || num === undefined) return 'N/A'
         return new Intl.NumberFormat('en-US').format(num)
@@ -59,8 +83,13 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-[#FAF9F6]">
-            <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="min-h-screen bg-[#FAF9F6] flex">
+            {/* Watchlist Sidebar */}
+            <Watchlist watchlist={watchlist} setWatchlist={setWatchlist} />
+
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto">
+                <div className="max-w-6xl mx-auto px-4 py-8">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -138,6 +167,31 @@ export default function Dashboard() {
                                     <div className="text-blue-100 text-sm mt-1">Current Price</div>
                                 </div>
                             </div>
+                            
+                            {/* Add to Watchlist Button */}
+                            <div className="mt-4">
+                                {isInWatchlist(stockData.ticker) ? (
+                                    <button
+                                        onClick={() => setWatchlist(prev => prev.filter(stock => stock.ticker !== stockData.ticker))}
+                                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Remove from Watchlist
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={addToWatchlist}
+                                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Add to Watchlist
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {/* Stock Stats Grid */}
@@ -197,6 +251,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                 )}
+                </div>
             </div>
         </div>
     )

@@ -68,6 +68,33 @@ class PolygonAPIService:
         response = requests.get(url, params=params)
         response.raise_for_status()
         return response.json()
+    
+    def get_financials(self, ticker, limit=4, timeframe='quarterly'):
+        """
+        Fetch comprehensive financial data from Polygon.io (Deprecated endpoint but included in Basic plan).
+        This includes balance sheet, cash flow statement, income statement, and comprehensive income.
+        
+        Args:
+            ticker: Stock ticker symbol
+            limit: Number of periods to retrieve (default: 4)
+            timeframe: 'quarterly' or 'annual' (default: 'quarterly')
+        
+        Returns:
+            JSON response with complete financial data
+        """
+        url = "https://api.polygon.io/vX/reference/financials"
+        params = {
+            "ticker": ticker,
+            "limit": limit,
+            "timeframe": timeframe,
+            "sort": "filing_date",
+            "order": "desc",
+            "apiKey": self.api_key
+        }
+        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
 
     
     
@@ -111,8 +138,6 @@ class StockDataService:
                     'current_price': prev_close_info.get('c'),  # Close price
                     'market_cap': ticker_info.get('market_cap'),
                     'volume': prev_close_info.get('v'),  # Volume
-                    'high_52_week': ticker_info.get('high_52_week'),
-                    'low_52_week': ticker_info.get('low_52_week'),
                     'last_updated': timezone.now()
                 }
             )

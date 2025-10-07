@@ -37,6 +37,20 @@ class PolygonAPIService:
             return response.json()
         return {}
     
+    def search_tickers(self, query):
+        """Search for tickers by company name using Polygon.io"""
+        url = "https://api.polygon.io/v3/reference/tickers"
+        params = {
+            "apikey": self.api_key,
+            "search": query,
+            "active": "true",
+            "limit": 10
+        }
+        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+    
 
     def get_historical_prices(self, ticker, from_date, to_date):
         """
@@ -119,3 +133,18 @@ class StockDataService:
         
         # If no cache, fetch from API
         return self.fetch_and_cache_data(ticker)
+    
+    def search_companies(self, query):
+        """Search for companies by name and return matching tickers"""
+        try:
+            search_results = self.polygon_service.search_tickers(query)
+            if search_results.get("status") != "OK":
+                raise ValueError("Failed to search companies")
+            
+            results = search_results.get("results", [])
+            return results
+            
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to search companies: {str(e)}")
+        except Exception as e:
+            raise Exception(f"An error occurred during search: {str(e)}")

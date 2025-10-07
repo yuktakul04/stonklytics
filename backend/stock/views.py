@@ -50,6 +50,61 @@ def get_stock_data(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
+@api_view(["GET"])
+def search_companies(request):
+    """
+    Search for companies by name
+    Query parameter: q (e.g., ?q=apple)
+    """
+    query = request.GET.get('q', '').strip()
+    
+    if not query:
+        return Response(
+            {"error": "Search query is required"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if len(query) < 2:
+        return Response(
+            {"error": "Search query must be at least 2 characters"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        stock_service = StockDataService()
+        results = stock_service.search_companies(query)
+        
+        # Format the results for the frontend
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                "ticker": result.get("ticker"),
+                "name": result.get("name"),
+                "market": result.get("market"),
+                "locale": result.get("locale"),
+                "primary_exchange": result.get("primary_exchange"),
+                "type": result.get("type"),
+                "active": result.get("active")
+            })
+        
+        return Response({
+            "query": query,
+            "results": formatted_results,
+            "count": len(formatted_results)
+        })
+        
+    except ValueError as e:
+        return Response(
+            {"error": str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    except Exception as e:
+        return Response(
+            {"error": f"An error occurred: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 @api_view(["GET"])
 def get_historical_data(request):
     """

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { api } from '../api'
+import UserPersonaSidebar from '../components/UserPersonaSidebar'
+import Watchlist, { useWatchlist } from '../components/Watchlist'
 
 export default function Dashboard() {
     const [ticker, setTicker] = useState('')
@@ -12,9 +14,13 @@ export default function Dashboard() {
     const [searchResults, setSearchResults] = useState([])
     const [showSearchResults, setShowSearchResults] = useState(false)
     const [searchLoading, setSearchLoading] = useState(false)
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [watchlistOpen, setWatchlistOpen] = useState(false)
+    const [watchlistMessage, setWatchlistMessage] = useState('')
     const navigate = useNavigate()
     const searchRef = useRef(null)
     const searchTimeoutRef = useRef(null)
+    const { addToWatchlist, user } = useWatchlist()
 
     // Close search results when clicking outside
     useEffect(() => {
@@ -102,6 +108,27 @@ export default function Dashboard() {
         setSearchResults([])
     }
 
+    const handleAddToWatchlist = async (ticker, name) => {
+        if (!user) {
+            setWatchlistMessage('Please log in to add stocks to your watchlist')
+            return
+        }
+
+        const result = await addToWatchlist(ticker, name)
+        if (result.success) {
+            setWatchlistMessage(`Added ${ticker} to watchlist!`)
+            setTimeout(() => setWatchlistMessage(''), 3000)
+        } else {
+            setWatchlistMessage(result.error)
+            setTimeout(() => setWatchlistMessage(''), 3000)
+        }
+    }
+
+    const handleStockSelectFromWatchlist = (selectedTicker) => {
+        setTicker(selectedTicker)
+        setWatchlistOpen(false)
+    }
+
     const handleLogout = async () => {
         try {
             await signOut(auth)
@@ -133,12 +160,33 @@ export default function Dashboard() {
                         <h1 className="text-4xl font-bold text-gray-900 mb-2">Stonklytics</h1>
                         <p className="text-gray-600">Real-time stock market analytics</p>
                     </div>
-                    <button 
-                        onClick={handleLogout}
-                        className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
-                    >
-                        Logout
-                    </button>
+                    <div className="flex items-center space-x-4">
+                        <button 
+                            onClick={() => setWatchlistOpen(true)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <span>Watchlist</span>
+                        </button>
+                        <button 
+                            onClick={() => setSidebarOpen(true)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span>Profile</span>
+                        </button>
+                        <button 
+                            onClick={handleLogout}
+                            className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                        >
+                            Logout
+                        </button>
+                    </div>
                 </div>
 
                 {/* Search Form */}
@@ -216,6 +264,18 @@ export default function Dashboard() {
                     </div>
                 )}
 
+                {/* Watchlist Message */}
+                {watchlistMessage && (
+                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
+                        <div className="flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            {watchlistMessage}
+                        </div>
+                    </div>
+                )}
+
                 {/* Stock Data Card */}
                 {stockData && (
                     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -232,6 +292,17 @@ export default function Dashboard() {
                                     </div>
                                     <div className="text-blue-100 text-sm mt-1">Current Price</div>
                                 </div>
+                            </div>
+                            <div className="mt-4 flex justify-end">
+                                <button
+                                    onClick={() => handleAddToWatchlist(stockData.ticker, stockData.name)}
+                                    className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    <span>Add to Watchlist</span>
+                                </button>
                             </div>
                         </div>
 
@@ -293,6 +364,19 @@ export default function Dashboard() {
                     </div>
                 )}
             </div>
+            
+            {/* User Persona Sidebar */}
+            <UserPersonaSidebar 
+                isOpen={sidebarOpen} 
+                onClose={() => setSidebarOpen(false)} 
+            />
+            
+            {/* Watchlist Sidebar */}
+            <Watchlist 
+                isOpen={watchlistOpen} 
+                onClose={() => setWatchlistOpen(false)}
+                onStockSelect={handleStockSelectFromWatchlist}
+            />
         </div>
     )
 }

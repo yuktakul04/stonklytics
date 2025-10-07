@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
@@ -9,18 +9,78 @@ export default function Dashboard() {
     const [stockData, setStockData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [searchResults, setSearchResults] = useState([])
+    const [showSearchResults, setShowSearchResults] = useState(false)
+    const [searchLoading, setSearchLoading] = useState(false)
     const navigate = useNavigate()
+    const searchRef = useRef(null)
+    const searchTimeoutRef = useRef(null)
+
+    // Close search results when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setShowSearchResults(false)
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [])
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current)
+            }
+        }
+    }, [])
+
+    const handleCompanySearch = async (query) => {
+        // Clear previous timeout
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current)
+        }
+
+        // If query is too short, clear results immediately
+        if (query.length < 2) {
+            setSearchResults([])
+            setShowSearchResults(false)
+            setSearchLoading(false)
+            return
+        }
+
+        // Debounce the search - wait 500ms after user stops typing
+        searchTimeoutRef.current = setTimeout(async () => {
+            setSearchLoading(true)
+            try {
+                const response = await api.get(`/stock/search/?q=${encodeURIComponent(query)}`)
+                setSearchResults(response.data.results || [])
+                setShowSearchResults(true)
+            } catch (err) {
+                console.error('Search error:', err)
+                setSearchResults([])
+                setShowSearchResults(false)
+            } finally {
+                setSearchLoading(false)
+            }
+        }, 500)
+    }
 
     const handleSearch = async (e) => {
         e.preventDefault()
         if (!ticker.trim()) {
-            setError('Please enter a ticker symbol')
+            setError('Please enter a ticker symbol or company name')
             return
         }
 
         setLoading(true)
         setError('')
         setStockData(null)
+        setShowSearchResults(false)
 
         try {
             console.log('Making API request to:', `/stock/data/?ticker=${ticker.toUpperCase()}`)
@@ -34,6 +94,12 @@ export default function Dashboard() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleTickerSelect = (selectedTicker) => {
+        setTicker(selectedTicker)
+        setShowSearchResults(false)
+        setSearchResults([])
     }
 
     const handleLogout = async () => {
@@ -79,14 +145,43 @@ export default function Dashboard() {
                 <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
                     <h2 className="text-2xl font-semibold text-gray-800 mb-4">Search Stock</h2>
                     <form onSubmit={handleSearch} className="flex gap-4">
-                        <div className="flex-1">
+                        <div className="flex-1 relative" ref={searchRef}>
                             <input
                                 type="text"
                                 value={ticker}
-                                onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                                placeholder="Enter ticker symbol (e.g., AAPL, MSFT, GOOGL)"
+                                onChange={(e) => {
+                                    const value = e.target.value
+                                    setTicker(value)
+                                    handleCompanySearch(value)
+                                }}
+                                placeholder="Enter ticker symbol or company name (e.g., AAPL, Apple, Microsoft)"
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
                             />
+                            
+                            {/* Search Results Dropdown */}
+                            {showSearchResults && (searchResults.length > 0 || searchLoading) && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                    {searchLoading ? (
+                                        <div className="p-4 text-center text-gray-500">
+                                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                            Searching...
+                                        </div>
+                                    ) : (
+                                        searchResults.map((result, index) => (
+                                            <button
+                                                key={index}
+                                                type="button"
+                                                onClick={() => handleTickerSelect(result.ticker)}
+                                                className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                            >
+                                                <div className="font-semibold text-gray-900">{result.ticker}</div>
+                                                <div className="text-sm text-gray-600">{result.name}</div>
+                                                <div className="text-xs text-gray-500">{result.primary_exchange}</div>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <button 
                             type="submit" 

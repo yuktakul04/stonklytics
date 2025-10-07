@@ -1,9 +1,9 @@
 from django.urls import path
-from .views import login_view, signup_view, watchlist_view, remove_from_watchlist
+from . import views_watchlist as wl
 
 urlpatterns = [
-    path('login', login_view, name='login'),
-    path('signup', signup_view, name='signup'),
-    path('watchlist', watchlist_view, name='watchlist'),
-    path('watchlist/<str:ticker>', remove_from_watchlist, name='remove-from-watchlist'),
+    path("watchlists", wl.list_watchlists),
+    path("watchlists/create", wl.create_watchlist),
+    path("watchlists/<uuid:watchlist_id>/items", wl.add_symbol),
+    path("watchlists/<uuid:watchlist_id>/items/<str:symbol>", wl.remove_symbol),
 ]

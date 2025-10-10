@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { auth } from '../firebase'
+import { api } from '../api'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -29,15 +31,32 @@ export default function Signup() {
 
     setLoading(true)
     try {
-      // 🔥 Firebase signup (replaces api.post('/auth/signup', ...))
-      await createUserWithEmailAndPassword(auth, email, password)
 
-      // Optional: show a friendly message, then navigate to login (or dashboard)
-      setMessage('Account created. You can log in now.')
-      setTimeout(() => navigate('/login'), 600)
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+
+      if (displayName) {
+        await updateProfile(user, { displayName })
+      }
+      const token = await user.getIdToken()
+      await api.post('/signup', {
+        email: email,
+        display_name: displayName || user.displayName || ''
+      })
+
+      setMessage('Account created successfully! Redirecting to dashboard...')
+      setTimeout(() => navigate('/dashboard'), 1000)
+
     } catch (err) {
-      // Common Firebase error codes: auth/email-already-in-use, auth/weak-password, etc.
-      setError(err?.message || 'Signup failed')
+      console.error('Signup error:', err)
+
+      if (err.response?.data?.error) {
+        setError(err.response.data.error)
+      } else if (err?.message) {
+        setError(err.message)
+      } else {
+        setError('Signup failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -50,11 +69,25 @@ export default function Signup() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Stonklytics</h1>
           <p className="text-gray-600">Create your account</p>
         </div>
-        
+
         <div className="bg-white py-8 px-6 shadow-xl rounded-xl">
           <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Sign Up</h2>
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-2">
+                Display Name (Optional)
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="John Doe"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+              />
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
@@ -69,7 +102,7 @@ export default function Signup() {
                 required
               />
             </div>
-            
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
@@ -84,7 +117,7 @@ export default function Signup() {
                 required
               />
             </div>
-            
+
             <div>
               <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm Password
@@ -99,15 +132,14 @@ export default function Signup() {
                 required
               />
             </div>
-            
-            <button 
-              type="submit" 
+
+            <button
+              type="submit"
               disabled={loading}
-              className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
-                loading 
-                  ? 'bg-gray-400 cursor-not-allowed' 
+              className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${loading
+                  ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
-              } text-white`}
+                } text-white`}
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -118,7 +150,7 @@ export default function Signup() {
                 'Create Account'
               )}
             </button>
-            
+
             <div className="text-center">
               <p className="text-gray-600">
                 Already have an account?{' '}
@@ -128,7 +160,7 @@ export default function Signup() {
               </p>
             </div>
           </form>
-          
+
           {/* Error Message */}
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -140,7 +172,7 @@ export default function Signup() {
               </div>
             </div>
           )}
-          
+
           {/* Success Message */}
           {message && (
             <div className="mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">

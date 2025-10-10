@@ -4,6 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import StockData
 from datetime import datetime
+from django.db import connection
 
 import dotenv
 from dotenv import load_dotenv
@@ -103,20 +104,56 @@ class StockDataService:
             prev_close_data = self.polygon_service.get_previous_close(ticker)
             prev_close_info = prev_close_data.get("results", [{}])[0] if prev_close_data.get("results") else {}
             
-            # Create or update stock data
-            stock_data, created = StockData.objects.update_or_create(
-                ticker=ticker,
-                defaults={
-                    'name': ticker_info.get('name', ticker),
-                    'current_price': prev_close_info.get('c'),  # Close price
-                    'market_cap': ticker_info.get('market_cap'),
-                    'volume': prev_close_info.get('v'),  # Volume
-                    'high_52_week': ticker_info.get('high_52_week'),
-                    'low_52_week': ticker_info.get('low_52_week'),
-                    'last_updated': timezone.now()
-                }
-            )
+                        
+            with connection.cursor() as cursor:
+                # Check if record exists
+                cursor.execute("SELECT id FROM stock_stockdata WHERE ticker = %s", [ticker])
+                existing = cursor.fetchone()
+                
+                current_time = timezone.now()
+                
+                if existing:
+                    # Update existing record
+                    cursor.execute("""
+                        UPDATE stock_stockdata 
+                        SET name = %s, current_price = %s, market_cap = %s, 
+                            volume = %s, high_52_week = %s, low_52_week = %s, 
+                            last_updated = %s
+                        WHERE ticker = %s
+                    """, [
+                        ticker_info.get('name', ticker),
+                        prev_close_info.get('c'),  # Close price
+                        ticker_info.get('market_cap'),
+                        prev_close_info.get('v'),  # Volume
+                        ticker_info.get('high_52_week'),
+                        ticker_info.get('low_52_week'),
+                        current_time,
+                        ticker
+                    ])
+                    stock_id = existing[0]
+                else:
+                    # Insert new record
+                    cursor.execute("""
+                        INSERT INTO stock_stockdata 
+                        (ticker, name, current_price, market_cap, volume, 
+                         high_52_week, low_52_week, last_updated, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING id
+                    """, [
+                        ticker,
+                        ticker_info.get('name', ticker),
+                        prev_close_info.get('c'),  # Close price
+                        ticker_info.get('market_cap'),
+                        prev_close_info.get('v'),  # Volume
+                        ticker_info.get('high_52_week'),
+                        ticker_info.get('low_52_week'),
+                        current_time,
+                        current_time
+                    ])
+                    stock_id = cursor.fetchone()[0]
             
+            # Fetch the updated/created record using Django ORM
+            stock_data = StockData.objects.get(id=stock_id)
             return stock_data, "polygon_api"
             
         except requests.exceptions.RequestException as e:

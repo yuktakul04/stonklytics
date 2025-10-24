@@ -17,9 +17,13 @@ export default function Dashboard() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [watchlistOpen, setWatchlistOpen] = useState(false)
     const [watchlistMessage, setWatchlistMessage] = useState('')
+    const [watchlists, setWatchlists] = useState([])
+    const [selectedWatchlistId, setSelectedWatchlistId] = useState('')
+    const [showWatchlistDropdown, setShowWatchlistDropdown] = useState(false)
     const navigate = useNavigate()
     const searchRef = useRef(null)
     const searchTimeoutRef = useRef(null)
+    const watchlistDropdownRef = useRef(null)
     const { addToWatchlist, user } = useWatchlist()
 
     // Close search results when clicking outside
@@ -28,6 +32,9 @@ export default function Dashboard() {
             if (searchRef.current && !searchRef.current.contains(event.target)) {
                 setShowSearchResults(false)
             }
+            if (watchlistDropdownRef.current && !watchlistDropdownRef.current.contains(event.target)) {
+                setShowWatchlistDropdown(false)
+            }
         }
 
         document.addEventListener('mousedown', handleClickOutside)
@@ -35,6 +42,26 @@ export default function Dashboard() {
             document.removeEventListener('mousedown', handleClickOutside)
         }
     }, [])
+
+    // Fetch watchlists when user logs in
+    useEffect(() => {
+        const fetchWatchlists = async () => {
+            if (user) {
+                try {
+                    const response = await api.get('/watchlist')
+                    setWatchlists(response.data)
+                    // Auto-select first watchlist if available
+                    if (response.data.length > 0 && !selectedWatchlistId) {
+                        setSelectedWatchlistId(response.data[0].id)
+                    }
+                } catch (err) {
+                    console.error('Error fetching watchlists:', err)
+                }
+            }
+        }
+        fetchWatchlists()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user])
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -108,15 +135,31 @@ export default function Dashboard() {
         setSearchResults([])
     }
 
-    const handleAddToWatchlist = async (ticker, name) => {
+    const handleAddToWatchlistClick = () => {
         if (!user) {
             setWatchlistMessage('Please log in to add stocks to your watchlist')
+            setTimeout(() => setWatchlistMessage(''), 3000)
             return
         }
 
-        const result = await addToWatchlist(ticker, name)
+        if (watchlists.length === 0) {
+            setWatchlistMessage('Please create a watchlist first')
+            setTimeout(() => setWatchlistMessage(''), 3000)
+            return
+        }
+
+        // Show dropdown
+        setShowWatchlistDropdown(true)
+    }
+
+    const handleWatchlistSelect = async (watchlistId, ticker, name) => {
+        setSelectedWatchlistId(watchlistId)
+        setShowWatchlistDropdown(false)
+
+        const result = await addToWatchlist(ticker, name, watchlistId)
         if (result.success) {
-            setWatchlistMessage(`Added ${ticker} to watchlist!`)
+            const selectedWatchlist = watchlists.find(w => w.id === watchlistId)
+            setWatchlistMessage(`Added ${ticker} to ${selectedWatchlist?.name || 'watchlist'}!`)
             setTimeout(() => setWatchlistMessage(''), 3000)
         } else {
             setWatchlistMessage(result.error)
@@ -161,7 +204,7 @@ export default function Dashboard() {
                         <p className="text-gray-600">Real-time stock market analytics</p>
                     </div>
                     <div className="flex items-center space-x-4">
-                        <button 
+                        <button
                             onClick={() => setWatchlistOpen(true)}
                             className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
                         >
@@ -171,7 +214,7 @@ export default function Dashboard() {
                             </svg>
                             <span>Watchlist</span>
                         </button>
-                        <button 
+                        <button
                             onClick={() => setSidebarOpen(true)}
                             className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
                         >
@@ -180,7 +223,7 @@ export default function Dashboard() {
                             </svg>
                             <span>Profile</span>
                         </button>
-                        <button 
+                        <button
                             onClick={handleLogout}
                             className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
                         >
@@ -205,7 +248,7 @@ export default function Dashboard() {
                                 placeholder="Enter ticker symbol or company name (e.g., AAPL, Apple, Microsoft)"
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
                             />
-                            
+
                             {/* Search Results Dropdown */}
                             {showSearchResults && (searchResults.length > 0 || searchLoading) && (
                                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -231,14 +274,13 @@ export default function Dashboard() {
                                 </div>
                             )}
                         </div>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             disabled={loading}
-                            className={`px-8 py-3 rounded-lg font-medium transition-all duration-200 ${
-                                loading 
-                                    ? 'bg-gray-400 cursor-not-allowed' 
-                                    : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
-                            } text-white`}
+                            className={`px-8 py-3 rounded-lg font-medium transition-all duration-200 ${loading
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
+                                } text-white`}
                         >
                             {loading ? (
                                 <div className="flex items-center gap-2">
@@ -293,16 +335,40 @@ export default function Dashboard() {
                                     <div className="text-blue-100 text-sm mt-1">Current Price</div>
                                 </div>
                             </div>
-                            <div className="mt-4 flex justify-end">
-                                <button
-                                    onClick={() => handleAddToWatchlist(stockData.ticker, stockData.name)}
-                                    className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                    <span>Add to Watchlist</span>
-                                </button>
+                            <div className="mt-4 flex justify-end relative" ref={watchlistDropdownRef}>
+                                {showWatchlistDropdown ? (
+                                    /* Dropdown Menu */
+                                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 min-w-[200px]">
+                                        <div className="p-2">
+                                            <div className="text-xs font-semibold text-gray-500 uppercase px-2 py-1 mb-1">
+                                                Select Watchlist
+                                            </div>
+                                            {watchlists.map((watchlist) => (
+                                                <button
+                                                    key={watchlist.id}
+                                                    onClick={() => handleWatchlistSelect(watchlist.id, stockData.ticker, stockData.name)}
+                                                    className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 transition-colors duration-150 flex items-center justify-between group"
+                                                >
+                                                    <span className="text-gray-900 font-medium">{watchlist.name}</span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {watchlist.items?.length || 0} stocks
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Add to Watchlist Button */
+                                    <button
+                                        onClick={handleAddToWatchlistClick}
+                                        className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
+                                        <span>Add to Watchlist</span>
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -364,16 +430,16 @@ export default function Dashboard() {
                     </div>
                 )}
             </div>
-            
+
             {/* User Persona Sidebar */}
-            <UserPersonaSidebar 
-                isOpen={sidebarOpen} 
-                onClose={() => setSidebarOpen(false)} 
+            <UserPersonaSidebar
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
             />
-            
+
             {/* Watchlist Sidebar */}
-            <Watchlist 
-                isOpen={watchlistOpen} 
+            <Watchlist
+                isOpen={watchlistOpen}
                 onClose={() => setWatchlistOpen(false)}
                 onStockSelect={handleStockSelectFromWatchlist}
             />

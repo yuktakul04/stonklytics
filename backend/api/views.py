@@ -92,85 +92,140 @@ def get_profile(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @firebase_auth_required
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 def watchlist_view(request):
     """
     GET: Retrieve user's watchlist
-    POST: Add stock to watchlist
     """
     firebase_uid = request.firebase_uid
     
-    if request.method == 'GET':
-        try:
-            if firebase_uid:
-                # Get watchlists for specific user
-                watchlists = Watchlist.objects.filter(firebase_uid=firebase_uid)
-                data = []
-                for watchlist in watchlists:
-                    watchlist_data = {
-                        'id': str(watchlist.id),
-                        'name': watchlist.name,
-                        'firebase_uid': watchlist.firebase_uid,
-                        'created_at': watchlist.created_at,
-                        'items': []
-                    }
-                    # Get items for this watchlist using raw SQL since it's an unmanaged model
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            "SELECT symbol, added_at FROM watchlist_items WHERE watchlist_id = %s",
-                            [watchlist.id]
-                        )
-                        items = cursor.fetchall()
-                        
-                        for symbol, added_at in items:
-                            watchlist_data['items'].append({
-                                'symbol': symbol,
-                                'added_at': added_at
-                            })
-                    data.append(watchlist_data)
-                return Response(data)
-           
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    try:
+        if firebase_uid:
+            # Get watchlists for specific user
+            watchlists = Watchlist.objects.filter(firebase_uid=firebase_uid)
+            data = []
+            for watchlist in watchlists:
+                watchlist_data = {
+                    'id': str(watchlist.id),
+                    'name': watchlist.name,
+                    'firebase_uid': watchlist.firebase_uid,
+                    'created_at': watchlist.created_at,
+                    'items': []
+                }
+                # Get items for this watchlist using raw SQL since it's an unmanaged model
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT symbol, added_at FROM watchlist_items WHERE watchlist_id = %s",
+                        [watchlist.id]
+                    )
+                    items = cursor.fetchall()
+                    
+                    for symbol, added_at in items:
+                        watchlist_data['items'].append({
+                            'symbol': symbol,
+                            'added_at': added_at
+                        })
+                data.append(watchlist_data)
+            return Response(data)
+       
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@firebase_auth_required
+@api_view(['POST'])
+def create_watchlist(request):
+    """
+    Create a new watchlist
+    """
+    firebase_uid = request.firebase_uid
+    watchlist_name = request.data.get('name', 'My Watchlist')
     
-    elif request.method == 'POST':
-        ticker = request.data.get('ticker', '').upper()
-        watchlist_name = request.data.get('name', 'My Watchlist')
-        firebase_uid = request.data.get('firebase_uid', firebase_uid)
+    if not firebase_uid:
+        return Response({"detail": "Firebase UID is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if not watchlist_name:
+        return Response({"detail": "Watchlist name is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Create new watchlist using raw SQL since it's an unmanaged model
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO watchlists (firebase_uid, name, created_at)
+                VALUES (%s, %s, NOW())
+                RETURNING id, firebase_uid, name, created_at
+            """, [firebase_uid, watchlist_name])
+            
+            result = cursor.fetchone()
+            watchlist_id, firebase_uid_val, name, created_at = result
         
-        if not ticker:
-            return Response({"detail": "Ticker is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'message': 'Watchlist created successfully',
+            'watchlist': {
+                'id': str(watchlist_id),
+                'firebase_uid': firebase_uid_val,
+                'name': name,
+                'created_at': created_at,
+                'items': []
+            }
+        }, status=status.HTTP_201_CREATED)
         
-        if not firebase_uid:
-            return Response({"detail": "Firebase UID is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@firebase_auth_required
+@api_view(['POST'])
+def add_to_watchlist(request):
+    """
+    Add stock to watchlist
+    """
+    firebase_uid = request.firebase_uid
+    ticker = request.data.get('ticker', '').upper()
+    watchlist_id = request.data.get('watchlist_id')
+    watchlist_name = request.data.get('name', 'My Watchlist')
+    
+    if not ticker:
+        return Response({"detail": "Ticker is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if not firebase_uid:
+        return Response({"detail": "Firebase UID is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # If watchlist_id is provided, use that watchlist; otherwise get or create a default one
+        if watchlist_id:
+            watchlist = Watchlist.objects.filter(id=watchlist_id, firebase_uid=firebase_uid).first()
+            if not watchlist:
+                return Response({"detail": "Watchlist not found or access denied"}, status=status.HTTP_404_NOT_FOUND)
+        else:
             # Get or create watchlist
             watchlist, created = Watchlist.objects.get_or_create(
                 firebase_uid=firebase_uid,
                 defaults={'name': watchlist_name}
             )
-            
-            # Check if item already exists in watchlist
-            if WatchlistItem.objects.filter(watchlist=watchlist, symbol=ticker).exists():
+        
+        # Check if item already exists in watchlist using raw SQL
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT symbol FROM watchlist_items WHERE watchlist_id = %s AND symbol = %s",
+                [watchlist.id, ticker]
+            )
+            if cursor.fetchone():
                 return Response({"detail": "Stock already in watchlist"}, status=status.HTTP_400_BAD_REQUEST)
             
             # Add item to watchlist using raw SQL since it's an unmanaged model
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO watchlist_items (watchlist_id, symbol, added_at) VALUES (%s, %s, NOW())",
-                    [watchlist.id, ticker]
-                )
-            
-            return Response({
-                'message': f'Added {ticker} to watchlist',
-                'watchlist_id': str(watchlist.id),
-                'ticker': ticker,
-                'watchlist_name': watchlist.name
-            }, status=status.HTTP_201_CREATED)
-            
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            cursor.execute(
+                "INSERT INTO watchlist_items (watchlist_id, symbol, added_at) VALUES (%s, %s, NOW())",
+                [watchlist.id, ticker]
+            )
+        
+        return Response({
+            'message': f'Added {ticker} to watchlist',
+            'watchlist_id': str(watchlist.id),
+            'ticker': ticker,
+            'watchlist_name': watchlist.name
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @firebase_auth_required
 @api_view(['DELETE'])
@@ -196,6 +251,39 @@ def remove_from_watchlist(request, ticker):
                 return Response({"detail": "Stock not in watchlist"}, status=status.HTTP_404_NOT_FOUND)
         
         return Response({"message": f"Removed {ticker} from watchlist"})
+        
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@firebase_auth_required
+@api_view(['DELETE'])
+def delete_watchlist(request, watchlist_id):
+    """
+    Delete a watchlist and all its items
+    """
+    firebase_uid = request.firebase_uid
+    
+    try:
+        # Verify the watchlist belongs to the user
+        watchlist = Watchlist.objects.filter(id=watchlist_id, firebase_uid=firebase_uid).first()
+        if not watchlist:
+            return Response({"detail": "Watchlist not found or access denied"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Delete watchlist items first (cascade delete)
+        with connection.cursor() as cursor:
+            # Delete all items in the watchlist
+            cursor.execute(
+                "DELETE FROM watchlist_items WHERE watchlist_id = %s",
+                [watchlist_id]
+            )
+            
+            # Delete the watchlist itself
+            cursor.execute(
+                "DELETE FROM watchlists WHERE id = %s",
+                [watchlist_id]
+            )
+        
+        return Response({"message": "Watchlist deleted successfully"})
         
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

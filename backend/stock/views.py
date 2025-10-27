@@ -207,3 +207,57 @@ def get_financials(request):
             {"error": f"An error occurred: {str(e)}"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(["GET"])
+def get_news(request):
+    """
+    Fetch latest news articles for a stock from Polygon.io
+    Query params:
+        - ticker (e.g., AAPL)
+        - limit (optional, default: 5)
+    """
+    ticker = request.GET.get('ticker', '').upper()
+    limit = request.GET.get('limit', '5')
+    
+    if not ticker:
+        return Response(
+            {"error": "Ticker symbol is required"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Validate limit
+        try:
+            limit = int(limit)
+            if limit < 1 or limit > 50:
+                limit = 5
+        except ValueError:
+            limit = 5
+        
+        polygon_service = StockDataService().polygon_service
+        news_data = polygon_service.get_news(ticker, limit)
+        
+        if news_data.get("status") != "OK":
+            return Response(
+                {"error": "Failed to fetch news data from Polygon.io"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        return Response({
+            "ticker": ticker,
+            "results": news_data.get("results", []),
+            "count": news_data.get("count", 0),
+            "source": "polygon_api"
+        })
+        
+    except requests.exceptions.HTTPError as e:
+        return Response(
+            {"error": f"API request failed: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    except Exception as e:
+        return Response(
+            {"error": f"An error occurred: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

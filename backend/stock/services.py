@@ -2,9 +2,9 @@ import requests
 import os
 from django.utils import timezone
 from datetime import timedelta
+from django.db import models, connection
 from .models import StockData
 from datetime import datetime
-from django.db import connection
 
 import dotenv
 from dotenv import load_dotenv
@@ -96,6 +96,28 @@ class PolygonAPIService:
         response = requests.get(url, params=params)
         response.raise_for_status()
         return response.json()
+    
+    def get_news(self, ticker, limit=5):
+        """
+        Fetch latest news articles for a stock from Polygon.io.
+        
+        Args:
+            ticker: Stock ticker symbol
+            limit: Number of articles to retrieve (default: 5)
+        
+        Returns:
+            JSON response with news articles
+        """
+        url = "https://api.polygon.io/v2/reference/news"
+        params = {
+            "ticker": ticker,
+            "limit": limit,
+            "apiKey": self.api_key
+        }
+        
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
 
     
     
@@ -132,19 +154,30 @@ class StockDataService:
             prev_close_info = prev_close_data.get("results", [{}])[0] if prev_close_data.get("results") else {}
             
             # Create or update stock data
-            stock_data, created = StockData.objects.update_or_create(
-                ticker=ticker,
-                defaults={
-                    'name': ticker_info.get('name', ticker),
-                    'current_price': prev_close_info.get('c'),  # Close price
-                    'market_cap': ticker_info.get('market_cap'),
-                    'volume': prev_close_info.get('v'),  # Volume
-                    'last_updated': timezone.now()
-                }
-            )
+            # First try to get existing record
+            try:
+                stock_data = StockData.objects.get(ticker=ticker)
+                # Update existing record
+                stock_data.name = ticker_info.get('name', ticker)
+                stock_data.current_price = prev_close_info.get('c')
+                stock_data.market_cap = ticker_info.get('market_cap')
+                stock_data.volume = prev_close_info.get('v')
+                stock_data.last_updated = timezone.now()
+                stock_data.save()
+            except StockData.DoesNotExist:
+                # Create new record with explicit ID
+                # Get the next available ID
+                max_id = StockData.objects.aggregate(max_id=models.Max('id'))['max_id'] or 0
+                stock_data = StockData.objects.create(
+                    id=max_id + 1,
+                    ticker=ticker,
+                    name=ticker_info.get('name', ticker),
+                    current_price=prev_close_info.get('c'),
+                    market_cap=ticker_info.get('market_cap'),
+                    volume=prev_close_info.get('v'),
+                    last_updated=timezone.now()
+                )
             
-            # Fetch the updated/created record using Django ORM
-            stock_data = StockData.objects.get(id=stock_id)
             return stock_data, "polygon_api"
             
         except requests.exceptions.RequestException as e:

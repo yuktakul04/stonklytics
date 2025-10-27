@@ -4,6 +4,7 @@ from rest_framework import status
 from .services import StockDataService
 from .serializers import StockDataResponseSerializer
 from datetime import datetime
+import requests
 
 
 @api_view(["GET"])
@@ -31,8 +32,6 @@ def get_stock_data(request):
             "current_price": float(stock_data.current_price) if stock_data.current_price else None,
             "market_cap": stock_data.market_cap,
             "volume": stock_data.volume,
-            "high_52_week": float(stock_data.high_52_week) if stock_data.high_52_week else None,
-            "low_52_week": float(stock_data.low_52_week) if stock_data.low_52_week else None,
             "last_updated": stock_data.last_updated,
             "source": source
         }
@@ -147,3 +146,64 @@ def get_historical_data(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["GET"])
+def get_financials(request):
+    """
+    Fetch comprehensive financial data from Polygon.io (includes balance sheet, cash flow, income statement)
+    Query params:
+        - ticker (e.g., AAPL)
+        - limit (optional, default: 4)
+        - timeframe (optional, default: 'quarterly')
+    """
+    ticker = request.GET.get('ticker', '').upper()
+    limit = request.GET.get('limit', '4')
+    timeframe = request.GET.get('timeframe', 'quarterly')
+    
+    if not ticker:
+        return Response(
+            {"error": "Ticker symbol is required"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Validate limit
+        try:
+            limit = int(limit)
+            if limit < 1 or limit > 50:
+                limit = 4
+        except ValueError:
+            limit = 4
+        
+        # Validate timeframe
+        valid_timeframes = ['quarterly', 'annual']
+        if timeframe not in valid_timeframes:
+            timeframe = 'quarterly'
+        
+        polygon_service = StockDataService().polygon_service
+        financial_data = polygon_service.get_financials(ticker, limit, timeframe)
+        
+        if financial_data.get("status") != "OK":
+            return Response(
+                {"error": "Failed to fetch financial data from Polygon.io"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        return Response({
+            "ticker": ticker,
+            "results": financial_data.get("results", []),
+            "count": financial_data.get("count", 0),
+            "source": "polygon_api"
+        })
+        
+    except requests.exceptions.HTTPError as e:
+        return Response(
+            {"error": f"API request failed: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    except Exception as e:
+        return Response(
+            {"error": f"An error occurred: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

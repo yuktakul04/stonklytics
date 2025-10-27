@@ -4,6 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import StockData
 from datetime import datetime
+from django.db import connection
 
 import dotenv
 from dotenv import load_dotenv
@@ -142,6 +143,8 @@ class StockDataService:
                 }
             )
             
+            # Fetch the updated/created record using Django ORM
+            stock_data = StockData.objects.get(id=stock_id)
             return stock_data, "polygon_api"
             
         except requests.exceptions.RequestException as e:

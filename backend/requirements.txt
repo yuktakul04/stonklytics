@@ -4,3 +4,6 @@ django-cors-headers
 djangorestframework
 python-dotenv
 requests
+psycopg2-binary
+dj-database-url
+firebase-admin

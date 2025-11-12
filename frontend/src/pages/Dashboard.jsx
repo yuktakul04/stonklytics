@@ -20,6 +20,9 @@ export default function Dashboard() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [watchlistOpen, setWatchlistOpen] = useState(false)
     const [watchlistMessage, setWatchlistMessage] = useState('')
+    const [watchlists, setWatchlists] = useState([])
+    const [selectedWatchlistId, setSelectedWatchlistId] = useState('')
+    const [showWatchlistDropdown, setShowWatchlistDropdown] = useState(false)
     const [fundamentalsOpen, setFundamentalsOpen] = useState(false)
     const [newsOpen, setNewsOpen] = useState(false)
     const [chatOpen, setChatOpen] = useState(false)
@@ -347,7 +350,7 @@ export default function Dashboard() {
                                     <div className="text-blue-100 text-sm mt-1">Current Price</div>
                                 </div>
                             </div>
-                            <div className="mt-4 flex justify-end space-x-3">
+                            <div className="mt-4 flex justify-end space-x-3" ref={watchlistDropdownRef}>
                                 <button
                                     onClick={() => setNewsOpen(true)}
                                     className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2"
@@ -366,15 +369,40 @@ export default function Dashboard() {
                                     </svg>
                                     <span>Fundamentals</span>
                                 </button>
-                                <button
-                                    onClick={() => handleAddToWatchlist(stockData.ticker, stockData.name)}
-                                    className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                    <span>Add to Watchlist</span>
-                                </button>
+
+                                {showWatchlistDropdown ? (
+                                    /* Dropdown Menu */
+                                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 min-w-[200px]">
+                                        <div className="p-2">
+                                            <div className="text-xs font-semibold text-gray-500 uppercase px-2 py-1 mb-1">
+                                                Select Watchlist
+                                            </div>
+                                            {watchlists.map((watchlist) => (
+                                                <button
+                                                    key={watchlist.id}
+                                                    onClick={() => handleWatchlistSelect(watchlist.id, stockData.ticker, stockData.name)}
+                                                    className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 transition-colors duration-150 flex items-center justify-between group"
+                                                >
+                                                    <span className="text-gray-900 font-medium">{watchlist.name}</span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {watchlist.items?.length || 0} stocks
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Add to Watchlist Button */
+                                    <button
+                                        onClick={handleAddToWatchlistClick}
+                                        className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
+                                        <span>Add to Watchlist</span>
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -437,32 +465,36 @@ export default function Dashboard() {
                 onClose={() => setWatchlistOpen(false)}
                 onStockSelect={handleStockSelectFromWatchlist}
             />
-            
+
             {/* Fundamentals Modal */}
-            {stockData && (
-                <FundamentalsModal 
-                    isOpen={fundamentalsOpen} 
-                    onClose={() => setFundamentalsOpen(false)}
-                    ticker={stockData.ticker}
-                    companyName={stockData.name}
-                />
-            )}
-            
+            {
+                stockData && (
+                    <FundamentalsModal
+                        isOpen={fundamentalsOpen}
+                        onClose={() => setFundamentalsOpen(false)}
+                        ticker={stockData.ticker}
+                        companyName={stockData.name}
+                    />
+                )
+            }
+
             {/* News Modal */}
-            {stockData && (
-                <NewsModal 
-                    isOpen={newsOpen} 
-                    onClose={() => setNewsOpen(false)}
-                    ticker={stockData.ticker}
-                    companyName={stockData.name}
-                />
-            )}
+            {
+                stockData && (
+                    <NewsModal
+                        isOpen={newsOpen}
+                        onClose={() => setNewsOpen(false)}
+                        ticker={stockData.ticker}
+                        companyName={stockData.name}
+                    />
+                )
+            }
 
             {/* Chat Interface */}
-            <ChatInterface 
-                isOpen={chatOpen} 
+            <ChatInterface
+                isOpen={chatOpen}
                 onClose={() => setChatOpen(false)}
             />
-        </div>
+        </div >
     )
 }

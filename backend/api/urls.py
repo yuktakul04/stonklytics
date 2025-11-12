@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    login_view, signup_view, get_profile, watchlist_view, remove_from_watchlist, create_watchlist, add_to_watchlist, delete_watchlist,
+    login_view, signup_view, get_profile, watchlist_view, remove_from_watchlist, create_watchlist, add_to_watchlist, delete_watchlist, chat_view,
 )
 
 urlpatterns = [
@@ -12,4 +12,5 @@ urlpatterns = [
     path('watchlist/add', add_to_watchlist, name='add-to-watchlist'),
     path('watchlist/remove/<str:ticker>', remove_from_watchlist, name='remove-from-watchlist'),
     path('watchlist/delete/<str:watchlist_id>', delete_watchlist, name='delete-watchlist'),
+    path('chat', chat_view, name='chat'),
 ]

@@ -7,6 +7,8 @@ from django.utils import timezone
 from .models import Watchlist, WatchlistItem, Profile
 from backend.decorators import firebase_auth_required
 import json
+import google.generativeai as genai
+import os
 
 @firebase_auth_required
 @api_view(["POST"]) 
@@ -287,3 +289,70 @@ def delete_watchlist(request, watchlist_id):
         
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@firebase_auth_required
+@api_view(['POST'])
+def chat_view(request):
+    """
+    AI Chat endpoint using Google Gemini for finance-related questions
+    """
+    try:
+        # Get API key from environment
+        api_key = os.environ.get('GEMINI_API_KEY')
+        if not api_key:
+            return Response(
+                {"error": "Gemini API key not configured. Please add GEMINI_API_KEY to your environment variables."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Configure Gemini
+        genai.configure(api_key=api_key)
+        
+        # Get message and history from request
+        user_message = request.data.get('message', '')
+        history = request.data.get('history', [])
+        
+        if not user_message:
+            return Response(
+                {"error": "Message is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create the model
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Create chat with history
+        chat = model.start_chat(history=history)
+        
+        # System context to guide the AI
+        system_context = """You are a knowledgeable financial assistant for Stonklytics, a stock market analytics platform. 
+Your role is to help users understand stocks, markets, investing strategies, and financial concepts.
+
+Guidelines:
+- Provide accurate, educational information about finance, stocks, and investing
+- Explain complex financial concepts in simple terms
+- Offer insights on market trends, technical analysis, and fundamental analysis
+- Be helpful and conversational
+- KEEP RESPONSES CONCISE AND SHORT - aim for 2-3 sentences unless more detail is specifically requested
+- Use bullet points for clarity when listing multiple items
+- Always remind users that you provide educational information, not financial advice
+- If asked about specific stock recommendations, emphasize that users should do their own research and consult with financial advisors
+- Stay focused on finance-related topics
+
+If a question is completely unrelated to finance, politely redirect the conversation back to financial topics."""
+        
+        # Send message with system context
+        full_message = f"{system_context}\n\nUser question: {user_message}"
+        response = chat.send_message(full_message)
+        
+        return Response({
+            "message": response.text,
+            "role": "model"
+        })
+        
+    except Exception as e:
+        print(f"Chat error: {str(e)}")
+        return Response(
+            {"error": f"Failed to get response from AI: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

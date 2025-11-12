@@ -9,6 +9,10 @@ import FundamentalsModal from '../components/FundamentalsModal'
 import NewsModal from '../components/NewsModal'
 import ChatInterface from '../components/ChatInterface'
 
+// 🔽 NEW: Summary modal + API helper
+import SummaryModal from '../components/SummaryModal'
+import { fetchSummary } from '../api'
+
 export default function Dashboard() {
     const [ticker, setTicker] = useState('')
     const [stockData, setStockData] = useState(null)
@@ -27,6 +31,13 @@ export default function Dashboard() {
     const [fundamentalsOpen, setFundamentalsOpen] = useState(false)
     const [newsOpen, setNewsOpen] = useState(false)
     const [chatOpen, setChatOpen] = useState(false)
+
+    // 🔽 NEW: state for AI Summary
+    const [summaryOpen, setSummaryOpen] = useState(false)
+    const [summaryText, setSummaryText] = useState('')
+    const [summarySource, setSummarySource] = useState('')
+    const [summaryLoading, setSummaryLoading] = useState(false)
+    const [summaryError, setSummaryError] = useState(null)
     const navigate = useNavigate()
     const searchRef = useRef(null)
     const searchTimeoutRef = useRef(null)
@@ -231,6 +242,26 @@ export default function Dashboard() {
         }).format(num)
     }
 
+    // 🔽 NEW: open summary & fetch from backend
+    const openSummary = async () => {
+        if (!stockData?.ticker) return
+        setSummaryOpen(true)
+        setSummaryLoading(true)
+        setSummaryError(null)
+        setSummaryText('')
+        setSummarySource('')
+
+        try {
+            const data = await fetchSummary(stockData.ticker)
+            setSummaryText(data?.summary ?? 'No summary available.')
+            setSummarySource(data?.source ?? '')
+        } catch (err) {
+            setSummaryError(err?.response?.data?.detail || err?.message || 'Failed to load summary.')
+        } finally {
+            setSummaryLoading(false)
+        }
+    }
+
     return (
         <div className="min-h-screen bg-dark-bg">
             {/* Top Navigation Bar */}
@@ -416,6 +447,14 @@ export default function Dashboard() {
                                     </svg>
                                     <span>Fundamentals</span>
                                 </button>
+                                {/* 🔽 NEW: Summary button */}
+                                <button
+                                    onClick={openSummary}
+                                    className="px-4 py-2 rounded-lg border border-dark-border bg-dark-surface hover:bg-dark-hover text-gray-300 hover:text-white transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
+                                >
+                                    <span className="text-lg">🧠</span>
+                                    <span>Summary</span>
+                                </button>
 
                                 {showWatchlistDropdown ? (
                                     <div className="absolute mt-2 bg-dark-card rounded-lg shadow-large border border-dark-border min-w-[200px] z-10">
@@ -528,22 +567,33 @@ export default function Dashboard() {
             }
 
             {/* News Modal */}
-            {
-                stockData && (
-                    <NewsModal
-                        isOpen={newsOpen}
-                        onClose={() => setNewsOpen(false)}
-                        ticker={stockData.ticker}
-                        companyName={stockData.name}
-                    />
-                )
-            }
+            {stockData && (
+                <NewsModal
+                    isOpen={newsOpen}
+                    onClose={() => setNewsOpen(false)}
+                    ticker={stockData.ticker}
+                    companyName={stockData.name}
+                />
+            )}
 
             {/* Chat Interface */}
             <ChatInterface
                 isOpen={chatOpen}
                 onClose={() => setChatOpen(false)}
             />
+
+            {/* 🔽 NEW: AI Summary Modal */}
+            {stockData && (
+                <SummaryModal
+                    open={summaryOpen}
+                    onClose={() => setSummaryOpen(false)}
+                    symbol={stockData.ticker}
+                    summary={summaryText}
+                    source={summarySource}
+                    loading={summaryLoading}
+                    error={summaryError}
+                />
+            )}
         </div>
     )
 }

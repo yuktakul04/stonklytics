@@ -14,6 +14,12 @@ export const api = axios.create({
     }
 })
 
+export async function fetchSummary(symbol) {
+    const res = await api.get(`/summary/${encodeURIComponent(symbol)}`);
+    // expected shape: { symbol, summary, source } from the backend
+    return res.data;
+  }
+
 // Add request interceptor to include Firebase token
 api.interceptors.request.use(
     async (config) => {

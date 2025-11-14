@@ -1,10 +1,20 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../firebase'
+import { api } from '../api'
 
 export default function UserPersonaSidebar({ isOpen, onClose }) {
+    const navigate = useNavigate()
     const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [watchlists, setWatchlists] = useState([])
+    const [statsLoading, setStatsLoading] = useState(true)
+    const [stats, setStats] = useState({
+        totalWatchlists: 0,
+        totalStocks: 0,
+        accountAge: 0
+    })
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -15,17 +25,88 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
         return () => unsubscribe()
     }, [])
 
+    // Fetch watchlists and calculate stats when sidebar opens
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (user && isOpen) {
+                setStatsLoading(true)
+                try {
+                    const response = await api.get('/watchlist')
+                    const watchlistsData = response.data || []
+                    setWatchlists(watchlistsData)
+                    
+                    // Calculate stats
+                    const totalWatchlists = watchlistsData.length
+                    const totalStocks = watchlistsData.reduce((sum, wl) => sum + (wl.items?.length || 0), 0)
+                    
+                    // Calculate account age in days
+                    const accountAge = user.metadata?.creationTime 
+                        ? Math.floor((new Date() - new Date(user.metadata.creationTime)) / (1000 * 60 * 60 * 24))
+                        : 0
+                    
+                    setStats({
+                        totalWatchlists,
+                        totalStocks,
+                        accountAge
+                    })
+                } catch (err) {
+                    console.error('Error fetching watchlist stats:', err)
+                } finally {
+                    setStatsLoading(false)
+                }
+            }
+        }
+        fetchStats()
+    }, [user, isOpen])
+
     const formatDate = (timestamp) => {
         if (!timestamp) return 'Unknown'
-        return new Date(timestamp).toLocaleDateString()
+        const date = new Date(timestamp)
+        return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        })
+    }
+
+    const formatRelativeTime = (timestamp) => {
+        if (!timestamp) return 'Unknown'
+        const date = new Date(timestamp)
+        const now = new Date()
+        const diffMs = now - date
+        const diffMins = Math.floor(diffMs / 60000)
+        const diffHours = Math.floor(diffMs / 3600000)
+        const diffDays = Math.floor(diffMs / 86400000)
+        
+        if (diffMins < 1) return 'Just now'
+        if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+        if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+        return formatDate(timestamp)
+    }
+
+    const getTopStocks = () => {
+        const stockCounts = {}
+        watchlists.forEach(wl => {
+            wl.items?.forEach(item => {
+                const symbol = item.symbol || item.ticker
+                if (symbol) {
+                    stockCounts[symbol] = (stockCounts[symbol] || 0) + 1
+                }
+            })
+        })
+        return Object.entries(stockCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([symbol]) => symbol)
     }
 
     if (loading) {
         return (
-            <div className={`fixed inset-y-0 right-0 w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed inset-y-0 right-0 w-80 bg-dark-card border-l border-dark-border shadow-large transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="p-6">
                     <div className="flex items-center justify-center h-64">
-                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                 </div>
             </div>
@@ -34,9 +115,9 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
 
     if (!user) {
         return (
-            <div className={`fixed inset-y-0 right-0 w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed inset-y-0 right-0 w-80 bg-dark-card border-l border-dark-border shadow-large transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="p-6">
-                    <div className="text-center text-gray-500">
+                    <div className="text-center text-gray-400">
                         <p>Please log in to view your profile</p>
                     </div>
                 </div>
@@ -49,20 +130,20 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
             {/* Backdrop */}
             {isOpen && (
                 <div 
-                    className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity duration-300"
                     onClick={onClose}
                 />
             )}
             
             {/* Sidebar */}
-            <div className={`fixed inset-y-0 right-0 w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed inset-y-0 right-0 w-80 bg-dark-card border-l border-dark-border shadow-large transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="flex flex-col h-full">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                        <h2 className="text-xl font-semibold text-gray-900">User Profile</h2>
+                    <div className="flex items-center justify-between p-6 border-b border-dark-border bg-dark-surface">
+                        <h2 className="text-xl font-semibold text-white">User Profile</h2>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            className="text-gray-400 hover:text-gray-300 transition-colors"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -74,70 +155,132 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
                     <div className="flex-1 overflow-y-auto p-6">
                         {/* User Info */}
                         <div className="mb-6">
-                            <div className="flex items-center space-x-4 mb-4">
-                                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                            <div className="flex items-center space-x-4 mb-6">
+                                <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold border-2 border-dark-border shadow-lg">
                                     {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                                 </div>
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-900">
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-white mb-1">
                                         {user.displayName || 'User'}
                                     </h3>
-                                    <p className="text-sm text-gray-600">{user.email}</p>
+                                    <p className="text-sm text-gray-400">{user.email}</p>
+                                    <div className="mt-2">
+                                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                            user.emailVerified 
+                                                ? 'bg-green-900/40 text-green-300 border border-green-700/50' 
+                                                : 'bg-yellow-900/40 text-yellow-300 border border-yellow-700/50'
+                                        }`}>
+                                            {user.emailVerified ? '✓ Verified' : '⚠ Unverified'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Stats Cards */}
+                        {statsLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="w-6 h-6 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-3 mb-6">
+                                <div className="bg-dark-surface rounded-lg p-4 border border-dark-border">
+                                    <div className="text-gray-400 text-xs font-medium mb-1">Watchlists</div>
+                                    <div className="text-2xl font-bold text-white">{stats.totalWatchlists}</div>
+                                </div>
+                                <div className="bg-dark-surface rounded-lg p-4 border border-dark-border">
+                                    <div className="text-gray-400 text-xs font-medium mb-1">Stocks Tracked</div>
+                                    <div className="text-2xl font-bold text-white">{stats.totalStocks}</div>
+                                </div>
+                                <div className="bg-dark-surface rounded-lg p-4 border border-dark-border col-span-2">
+                                    <div className="text-gray-400 text-xs font-medium mb-1">Account Age</div>
+                                    <div className="text-lg font-semibold text-white">
+                                        {stats.accountAge > 0 ? `${stats.accountAge} day${stats.accountAge !== 1 ? 's' : ''}` : 'New Account'}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Top Tracked Stocks */}
+                        {!statsLoading && getTopStocks().length > 0 && (
+                            <div className="mb-6">
+                                <h4 className="text-sm font-semibold text-gray-300 mb-3">Most Tracked Stocks</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {getTopStocks().map((symbol, idx) => (
+                                        <span 
+                                            key={idx}
+                                            className="px-3 py-1.5 bg-dark-surface border border-dark-border rounded-lg text-sm font-medium text-white hover:bg-dark-hover transition-colors"
+                                        >
+                                            {symbol}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Account Details */}
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <p className="text-sm text-gray-600">{user.email}</p>
-                            </div>
+                        <div className="space-y-4 mb-6">
+                            <div className="pt-4 border-t border-dark-border">
+                                <h4 className="text-sm font-semibold text-gray-300 mb-3">Account Information</h4>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Member Since</label>
+                                        <p className="text-sm text-gray-300">{formatDate(user.metadata?.creationTime)}</p>
+                                    </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
-                                <p className="text-xs text-gray-600 font-mono">{user.uid}</p>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email Verified</label>
-                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                                    user.emailVerified 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-red-100 text-red-800'
-                                }`}>
-                                    {user.emailVerified ? 'Verified' : 'Not Verified'}
-                                </span>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Member Since</label>
-                                <p className="text-sm text-gray-600">{formatDate(user.metadata?.creationTime)}</p>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Last Sign In</label>
-                                <p className="text-sm text-gray-600">{formatDate(user.metadata?.lastSignInTime)}</p>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Last Sign In</label>
+                                        <p className="text-sm text-gray-300">{formatRelativeTime(user.metadata?.lastSignInTime)}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Provider Info */}
-                        {user.providerData && user.providerData.length > 0 && (
-                            <div className="pt-4 border-t border-gray-200">
-                                <h4 className="text-sm font-medium text-gray-700 mb-2">Sign-in Method</h4>
-                                <div className="space-y-1 text-sm text-gray-600">
-                                    {user.providerData.map((provider, index) => (
-                                        <p key={index}>
-                                            <span className="font-medium">{provider.providerId}:</span> {provider.email || provider.uid}
-                                        </p>
+                        {/* Watchlists Preview */}
+                        {!statsLoading && watchlists.length > 0 && (
+                            <div className="pt-4 border-t border-dark-border">
+                                <h4 className="text-sm font-semibold text-gray-300 mb-3">Your Watchlists</h4>
+                                <div className="space-y-2">
+                                    {watchlists.slice(0, 3).map((watchlist) => (
+                                        <button
+                                            key={watchlist.id}
+                                            onClick={() => {
+                                                onClose()
+                                                navigate(`/watchlists?watchlist=${watchlist.id}`)
+                                            }}
+                                            className="w-full bg-dark-surface rounded-lg p-3 border border-dark-border hover:bg-dark-hover transition-colors text-left cursor-pointer"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <div className="text-sm font-medium text-white">{watchlist.name}</div>
+                                                    <div className="text-xs text-gray-400 mt-0.5">
+                                                        {watchlist.items?.length || 0} stock{watchlist.items?.length !== 1 ? 's' : ''}
+                                                    </div>
+                                                </div>
+                                                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                </svg>
+                                            </div>
+                                        </button>
                                     ))}
+                                    {watchlists.length > 3 && (
+                                        <button
+                                            onClick={() => {
+                                                onClose()
+                                                navigate('/watchlists')
+                                            }}
+                                            className="w-full text-xs text-gray-400 hover:text-gray-300 text-center pt-1 transition-colors"
+                                        >
+                                            +{watchlists.length - 3} more watchlist{watchlists.length - 3 !== 1 ? 's' : ''}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* Footer */}
-                    <div className="p-6 border-t border-gray-200">
+                    <div className="p-6 border-t border-dark-border bg-dark-surface">
                         <div className="text-center text-sm text-gray-500">
                             <p>Stonklytics User Profile</p>
                         </div>

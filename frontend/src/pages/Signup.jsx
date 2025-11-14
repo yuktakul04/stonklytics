@@ -31,7 +31,6 @@ export default function Signup() {
 
     setLoading(true)
     try {
-
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
@@ -63,19 +62,19 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-dark-bg flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 animate-fade-in">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Stonklytics</h1>
-          <p className="text-gray-600">Create your account</p>
+          <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Stonklytics</h1>
+          <p className="text-gray-400">Create your account</p>
         </div>
 
-        <div className="bg-white py-8 px-6 shadow-xl rounded-xl">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Sign Up</h2>
+        <div className="bg-dark-card border border-dark-border py-10 px-8 shadow-large rounded-xl">
+          <h2 className="text-2xl font-semibold text-white mb-8 text-center">Sign Up</h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">
                 Display Name (Optional)
               </label>
               <input
@@ -84,12 +83,12 @@ export default function Signup() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="John Doe"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+                className="w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-gray-600 focus:border-dark-border outline-none transition-all duration-200"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                 Email Address
               </label>
               <input
@@ -98,13 +97,13 @@ export default function Signup() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+                className="w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-gray-600 focus:border-dark-border outline-none transition-all duration-200"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
                 Password
               </label>
               <input
@@ -113,13 +112,13 @@ export default function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+                className="w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-gray-600 focus:border-dark-border outline-none transition-all duration-200"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="confirm" className="block text-sm font-medium text-gray-300 mb-2">
                 Confirm Password
               </label>
               <input
@@ -128,7 +127,7 @@ export default function Signup() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+                className="w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-gray-600 focus:border-dark-border outline-none transition-all duration-200"
                 required
               />
             </div>
@@ -136,14 +135,14 @@ export default function Signup() {
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${loading
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg'
-                } text-white`}
+              className={`w-full py-3.5 px-4 rounded-lg font-medium transition-all duration-200 ${loading
+                  ? 'bg-gray-800 cursor-not-allowed text-gray-500'
+                  : 'bg-white text-dark-bg hover:bg-gray-200 hover:shadow-medium'
+                }`}
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-dark-bg border-t-transparent rounded-full animate-spin"></div>
                   Creating account...
                 </div>
               ) : (
@@ -152,9 +151,9 @@ export default function Signup() {
             </button>
 
             <div className="text-center">
-              <p className="text-gray-600">
+              <p className="text-gray-400 text-sm">
                 Already have an account?{' '}
-                <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                <Link to="/login" className="text-white hover:text-gray-300 font-medium transition-colors">
                   Login
                 </Link>
               </p>
@@ -163,24 +162,24 @@ export default function Signup() {
 
           {/* Error Message */}
           {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mt-6 bg-dark-surface border border-red-900/50 text-red-400 px-4 py-3 rounded-lg animate-fade-in">
               <div className="flex items-center">
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
-                {error}
+                <span className="text-sm">{error}</span>
               </div>
             </div>
           )}
 
           {/* Success Message */}
           {message && (
-            <div className="mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+            <div className="mt-6 bg-dark-surface border border-green-900/50 text-green-400 px-4 py-3 rounded-lg animate-fade-in">
               <div className="flex items-center">
-                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                {message}
+                <span className="text-sm">{message}</span>
               </div>
             </div>
           )}

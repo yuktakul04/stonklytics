@@ -7,7 +7,7 @@ from django.utils import timezone
 from .models import Watchlist, WatchlistItem, Profile
 from backend.decorators import firebase_auth_required
 import json
-import google.generativeai as genai
+from google import genai
 import os
 
 @firebase_auth_required
@@ -295,6 +295,7 @@ def delete_watchlist(request, watchlist_id):
 def chat_view(request):
     """
     AI Chat endpoint using Google Gemini for finance-related questions
+    Uses the new Google GenAI API with gemini-2.5-flash model
     """
     try:
         # Get API key from environment
@@ -305,12 +306,13 @@ def chat_view(request):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        # Configure Gemini
-        genai.configure(api_key=api_key)
+        # Initialize the client (API key is read from GEMINI_API_KEY env variable)
+        client = genai.Client()
         
-        # Get message and history from request
+        # Get message, history, and watchlist from request
         user_message = request.data.get('message', '')
         history = request.data.get('history', [])
+        watchlist_data = request.data.get('watchlist', None)
         
         if not user_message:
             return Response(
@@ -318,40 +320,108 @@ def chat_view(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Create the model
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        # Build watchlist context if provided
+        watchlist_context = ""
+        if watchlist_data and watchlist_data.get('stocks'):
+            stocks = watchlist_data.get('stocks', [])
+            stock_list = ", ".join([stock.get('ticker', '') for stock in stocks if stock.get('ticker')])
+            if stock_list:
+                watchlist_context = f"\n\nIMPORTANT - USER'S WATCHLIST CONTEXT:\nThe user has imported their watchlist named '{watchlist_data.get('name', 'My Watchlist')}' containing these stocks: {stock_list}.\n\nWhen the user asks questions, you should:\n- Reference these specific stocks when relevant to their question\n- Provide insights about these stocks if asked\n- Compare these stocks if the user asks for comparisons\n- Consider their portfolio context when giving advice\n- Ask follow-up questions about these stocks if relevant\n\nHowever, still maintain your conversational approach - don't overwhelm them with information about all stocks at once. Guide them step by step."
         
-        # Create chat with history
-        chat = model.start_chat(history=history)
-        
-        # System context to guide the AI
-        system_context = """You are a knowledgeable financial assistant for Stonklytics, a stock market analytics platform. 
-Your role is to help users understand stocks, markets, investing strategies, and financial concepts.
+        # System instruction to guide the AI
+        system_instruction = """You are a knowledgeable financial assistant for Stonklytics, a stock market analytics platform. 
+Your role is to help users understand stocks, markets, investing strategies, and financial concepts through CONVERSATIONAL, STEP-BY-STEP guidance.
 
-Guidelines:
-- Provide accurate, educational information about finance, stocks, and investing
-- Explain complex financial concepts in simple terms
-- Offer insights on market trends, technical analysis, and fundamental analysis
-- Be helpful and conversational
-- KEEP RESPONSES CONCISE AND SHORT - aim for 2-3 sentences unless more detail is specifically requested
-- Use bullet points for clarity when listing multiple items
-- Always remind users that you provide educational information, not financial advice
-- If asked about specific stock recommendations, emphasize that users should do their own research and consult with financial advisors
-- Stay focused on finance-related topics
+CRITICAL GUIDELINES:
+1. CONVERSATIONAL APPROACH - Don't give long, comprehensive answers immediately. Instead:
+   - Ask 1-2 clarifying follow-up questions to understand the user's specific needs, goals, or context
+   - Break down complex topics into smaller, digestible conversations
+   - Guide users through their questions step by step
+   - Only provide direct, complete answers when the question is very specific and straightforward (e.g., "What is a P/E ratio?")
 
-If a question is completely unrelated to finance, politely redirect the conversation back to financial topics."""
+2. CONTEXT MANAGEMENT:
+   - Remember previous questions and answers in the conversation
+   - Build on previous context when answering follow-ups
+   - Reference earlier parts of the conversation when relevant
+   - If the user asks a new topic, acknowledge the shift but maintain conversational flow
+
+3. RESPONSE STYLE:
+   - Keep responses SHORT and CONVERSATIONAL (2-4 sentences max)
+   - Ask ONE follow-up question at a time to keep the conversation focused
+   - Use natural, friendly language - like talking to a friend
+   - Use bullet points sparingly - prefer conversational flow
+   - Format headers using ### for section titles (but don't overuse them)
+
+4. EXAMPLES:
+   - User: "Tell me about investing" → You: "Great question! To give you the most helpful guidance, are you just starting out, or do you have some experience? Also, what's your main goal - long-term wealth building, retirement planning, or something else?"
+   - User: "What's a dividend?" → You: "A dividend is a portion of a company's profits paid to shareholders. Do you want to know how dividends work, or are you interested in finding dividend-paying stocks?"
+   - User: "Explain technical analysis" → You: "Technical analysis uses charts and patterns to predict price movements. Are you looking to learn the basics, or do you want to understand specific indicators like moving averages or RSI?"
+
+5. DIRECT ANSWERS ONLY WHEN:
+   - Question is very specific and factual (e.g., "What does IPO stand for?")
+   - User explicitly asks for a direct answer (e.g., "Just tell me directly")
+   - User has already provided all necessary context through previous questions
+
+6. DISCLAIMERS:
+   - Always remind users that you provide educational information, not financial advice
+   - Emphasize that users should do their own research and consult with financial advisors for personalized advice
+
+7. TOPIC FOCUS:
+   - Stay focused on finance-related topics
+   - If asked about unrelated topics, politely redirect back to finance
+
+Remember: Your goal is to have a CONVERSATION, not to deliver a lecture. Guide users through their learning journey with thoughtful questions."""
         
-        # Send message with system context
-        full_message = f"{system_context}\n\nUser question: {user_message}"
-        response = chat.send_message(full_message)
+        # Build contents - can be a string or array of message objects
+        if history and len(history) > 0:
+            # Build contents array from history
+            contents = []
+            for msg in history:
+                role = msg.get('role', 'user')
+                parts = msg.get('parts', [])
+                if parts and len(parts) > 0:
+                    text = parts[0].get('text', '')
+                    if text:
+                        contents.append({
+                            "role": role if role != 'model' else 'model',
+                            "parts": [{"text": text}]
+                        })
+            
+            # Add current user message with watchlist context if available
+            user_message_with_context = user_message + watchlist_context
+            contents.append({
+                "role": "user",
+                "parts": [{"text": user_message_with_context}]
+            })
+        else:
+            # No history - combine system instruction with user message and watchlist context
+            contents = system_instruction + watchlist_context + "\n\nUser question: " + user_message
+        
+        # Generate content using the new API with gemini-2.5-flash
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=contents
+        )
+        
+        # Extract response text
+        response_text = ""
+        if hasattr(response, 'text'):
+            response_text = response.text
+        elif hasattr(response, 'candidates') and response.candidates:
+            response_text = response.candidates[0].content.parts[0].text
+        else:
+            response_text = str(response)
         
         return Response({
-            "message": response.text,
+            "message": response_text,
             "role": "model"
         })
         
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
         print(f"Chat error: {str(e)}")
+        print(f"Traceback: {error_trace}")
         return Response(
             {"error": f"Failed to get response from AI: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR

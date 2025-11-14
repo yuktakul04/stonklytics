@@ -8,3 +8,4 @@ psycopg2-binary
 dj-database-url
 firebase-admin
 google-generativeai
+google-genai

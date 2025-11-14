@@ -23,14 +23,11 @@ export default function ProtectedRoute({ children }) {
 
     if (loading) {
         return (
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                height: '100vh',
-                fontSize: '18px'
-            }}>
-                Loading...
+            <div className="flex items-center justify-center h-screen bg-dark-bg">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-gray-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-400">Loading...</p>
+                </div>
             </div>
         )
     }

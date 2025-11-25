@@ -447,13 +447,12 @@ export default function Dashboard() {
                                     </svg>
                                     <span>Fundamentals</span>
                                 </button>
-                                {/* 🔽 NEW: Summary button */}
+                                {/* 🔽 Summary button (no brain icon) */}
                                 <button
                                     onClick={openSummary}
-                                    className="px-4 py-2 rounded-lg border border-dark-border bg-dark-surface hover:bg-dark-hover text-gray-300 hover:text-white transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
+                                    className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2"
                                 >
-                                    <span className="text-lg">🧠</span>
-                                    <span>Summary</span>
+                                    AI Summary
                                 </button>
 
                                 {showWatchlistDropdown ? (

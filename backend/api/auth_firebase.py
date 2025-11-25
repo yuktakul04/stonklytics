@@ -82,6 +82,9 @@ def firebase_protected(view_func):
             # https://firebase.google.com/docs/emulator-suite
             decoded = auth.verify_id_token(token)  # check_revoked=False (default)
             request.user = decoded  # contains uid, email, etc.
+            # Set firebase_uid and user_email for compatibility with views
+            request.firebase_uid = decoded.get("uid")
+            request.user_email = decoded.get("email")
         except Exception as e:
             return JsonResponse({"detail": f"Invalid token: {str(e)}"}, status=401)
 

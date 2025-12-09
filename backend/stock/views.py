@@ -23,7 +23,14 @@ def get_stock_data(request):
     
     try:
         stock_service = StockDataService()
-        stock_data, source = stock_service.get_stock_data(ticker)
+        stock_data, source, ohlc_data = stock_service.get_stock_data(ticker)
+        
+        # Extract OHLC values from Polygon API response
+        # Polygon API returns: o (open), h (high), l (low), c (close)
+        open_price = ohlc_data.get('o') if ohlc_data else None
+        high_price = ohlc_data.get('h') if ohlc_data else None
+        low_price = ohlc_data.get('l') if ohlc_data else None
+        close_price = ohlc_data.get('c') if ohlc_data else None
         
         # Serialize the response
         response_data = {
@@ -33,7 +40,11 @@ def get_stock_data(request):
             "market_cap": stock_data.market_cap,
             "volume": stock_data.volume,
             "last_updated": stock_data.last_updated,
-            "source": source
+            "source": source,
+            "open_price": float(open_price) if open_price is not None else None,
+            "high_price": float(high_price) if high_price is not None else None,
+            "low_price": float(low_price) if low_price is not None else None,
+            "close_price": float(close_price) if close_price is not None else None
         }
         
         return Response(response_data)
@@ -132,7 +143,14 @@ def get_historical_data(request):
             return Response({"message": "No data found", "ticker": ticker, "prices": []})
 
         prices = [
-            {"date": datetime.utcfromtimestamp(day["t"] / 1000).strftime('%Y-%m-%d'), "close": day["c"]}
+            {
+                "date": datetime.utcfromtimestamp(day["t"] / 1000).strftime('%Y-%m-%d'),
+                "open": day.get("o"),
+                "high": day.get("h"),
+                "low": day.get("l"),
+                "close": day.get("c"),
+                "volume": day.get("v", 0)
+            }
             for day in results
         ]
 

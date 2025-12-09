@@ -8,6 +8,9 @@ import Watchlist, { useWatchlist } from '../components/Watchlist'
 import FundamentalsModal from '../components/FundamentalsModal'
 import NewsModal from '../components/NewsModal'
 import ChatInterface from '../components/ChatInterface'
+import HistoricalChart from '../components/HistoricalChart'
+import PriceStatsSummary from '../components/PriceStatsSummary'
+import SectorComparisonChart from '../components/SectorComparisonChart'
 
 // 🔽 NEW: Summary modal + API helper
 import SummaryModal from '../components/SummaryModal'
@@ -428,7 +431,18 @@ export default function Dashboard() {
                                     <div className="text-gray-400 text-sm">Current Price</div>
                                 </div>
                             </div>
-                            <div className="flex justify-end space-x-3" ref={watchlistDropdownRef}>
+                            
+                            {/* Price Stats Summary */}
+                            <PriceStatsSummary 
+                                data={{
+                                    open_price: stockData.open_price,
+                                    close_price: stockData.close_price,
+                                    high_price: stockData.high_price,
+                                    low_price: stockData.low_price
+                                }}
+                            />
+                            
+                            <div className="flex justify-end space-x-3 mt-6" ref={watchlistDropdownRef}>
                                 <button
                                     onClick={() => setNewsOpen(true)}
                                     className="px-4 py-2 rounded-lg border border-dark-border bg-dark-surface hover:bg-dark-hover text-gray-300 hover:text-white transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
@@ -516,6 +530,15 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Historical Chart */}
+                            <HistoricalChart ticker={stockData.ticker} />
+
+                            {/* Sector Comparison Chart */}
+                            <SectorComparisonChart 
+                                data={stockData.sector_performance}
+                                currentSector={stockData.sector_name}
+                            />
                         </div>
                     </div>
                 )}

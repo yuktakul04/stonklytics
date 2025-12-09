@@ -38,6 +38,41 @@ class PolygonAPIService:
             return response.json()
         return {}
     
+    def get_daily_ohlc(self, ticker):
+        """
+        Fetch today's OHLC data from Polygon.io using daily open-close endpoint.
+        Falls back to previous day if today's data is not available.
+        """
+        # Try to get today's data first
+        today = datetime.now().date().strftime('%Y-%m-%d')
+        url = f"https://api.polygon.io/v1/open-close/{ticker}/{today}"
+        params = {
+            "adjusted": "true",
+            "apikey": self.api_key
+        }
+        
+        try:
+            response = requests.get(url, params=params)
+            if response.status_code == 200:
+                data = response.json()
+                # Check if we got valid data
+                if data.get("status") == "OK" and data.get("open") is not None:
+                    # Convert to format consistent with aggregates endpoint
+                    return {
+                        "results": [{
+                            "o": data.get("open"),
+                            "h": data.get("high"),
+                            "l": data.get("low"),
+                            "c": data.get("close"),
+                            "v": data.get("volume", 0)
+                        }]
+                    }
+        except Exception:
+            pass  # Fall through to previous day
+        
+        # Fallback to previous day's data
+        return self.get_previous_close(ticker)
+    
     def search_tickers(self, query):
         """Search for tickers by company name using Polygon.io"""
         url = "https://api.polygon.io/v3/reference/tickers"
@@ -149,7 +184,11 @@ class StockDataService:
             
             ticker_info = ticker_data.get("results", {})
             
-            # Get previous close data
+            # Get daily OHLC data (tries today first, falls back to previous day)
+            ohlc_data_response = self.polygon_service.get_daily_ohlc(ticker)
+            ohlc_info = ohlc_data_response.get("results", [{}])[0] if ohlc_data_response.get("results") else {}
+            
+            # Also get previous close for current_price (for consistency)
             prev_close_data = self.polygon_service.get_previous_close(ticker)
             prev_close_info = prev_close_data.get("results", [{}])[0] if prev_close_data.get("results") else {}
             
@@ -178,7 +217,7 @@ class StockDataService:
                     last_updated=timezone.now()
                 )
             
-            return stock_data, "polygon_api"
+            return stock_data, "polygon_api", ohlc_info
             
         except requests.exceptions.RequestException as e:
             raise Exception(f"Failed to fetch data from Polygon.io: {str(e)}")
@@ -190,7 +229,11 @@ class StockDataService:
         # First check cache
         cached_data, source = self.get_cached_data(ticker)
         if cached_data:
-            return cached_data, source
+            # If cached, we still need to fetch OHLC data for the response
+            # Fetch fresh OHLC data (tries today first, falls back to previous day)
+            ohlc_data_response = self.polygon_service.get_daily_ohlc(ticker)
+            ohlc_info = ohlc_data_response.get("results", [{}])[0] if ohlc_data_response.get("results") else {}
+            return cached_data, source, ohlc_info
         
         # If no cache, fetch from API
         return self.fetch_and_cache_data(ticker)

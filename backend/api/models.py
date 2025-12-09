@@ -1,8 +1,6 @@
+# api/models.py
 from django.db import models
-from django.contrib.auth.models import User
 import uuid
-
-# Create your models here.
 
 class Profile(models.Model):
     """
@@ -53,7 +51,7 @@ class WatchlistItem(models.Model):
     )
     symbol = models.TextField()
     added_at = models.DateTimeField()
-    
+
     class Meta:
         managed = False
         db_table = 'watchlist_items'
@@ -61,6 +59,18 @@ class WatchlistItem(models.Model):
         verbose_name_plural = 'Watchlist Items'
         # Use a composite primary key since the table doesn't have an id column
         unique_together = [['watchlist', 'symbol']]
-    
+
     def __str__(self):
         return f"{self.symbol} in {self.watchlist.name}"
+
+class SummaryCache(models.Model):
+    symbol = models.CharField(max_length=16, unique=True, db_index=True)
+    summary = models.TextField()
+    sources = models.JSONField(null=True, blank=True, default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "summary_cache"
+
+    def __str__(self):
+        return f"{self.symbol} @ {self.created_at}"

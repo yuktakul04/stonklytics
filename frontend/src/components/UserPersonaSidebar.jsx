@@ -25,7 +25,6 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
         return () => unsubscribe()
     }, [])
 
-    // Fetch watchlists and calculate stats when sidebar opens
     useEffect(() => {
         const fetchStats = async () => {
             if (user && isOpen) {
@@ -35,11 +34,9 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
                     const watchlistsData = response.data || []
                     setWatchlists(watchlistsData)
                     
-                    // Calculate stats
                     const totalWatchlists = watchlistsData.length
                     const totalStocks = watchlistsData.reduce((sum, wl) => sum + (wl.items?.length || 0), 0)
                     
-                    // Calculate account age in days
                     const accountAge = user.metadata?.creationTime 
                         ? Math.floor((new Date() - new Date(user.metadata.creationTime)) / (1000 * 60 * 60 * 24))
                         : 0
@@ -103,10 +100,10 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
 
     if (loading) {
         return (
-            <div className={`fixed inset-y-0 right-0 w-80 bg-dark-card border-l border-dark-border shadow-large transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed inset-y-0 right-0 w-80 bg-[#0f0f12] border-l border-[#27272a] shadow-large transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="p-6">
                     <div className="flex items-center justify-center h-64">
-                        <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-8 h-8 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin"></div>
                     </div>
                 </div>
             </div>
@@ -115,9 +112,9 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
 
     if (!user) {
         return (
-            <div className={`fixed inset-y-0 right-0 w-80 bg-dark-card border-l border-dark-border shadow-large transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed inset-y-0 right-0 w-80 bg-[#0f0f12] border-l border-[#27272a] shadow-large transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="p-6">
-                    <div className="text-center text-gray-400">
+                    <div className="text-center text-zinc-500">
                         <p>Please log in to view your profile</p>
                     </div>
                 </div>
@@ -130,45 +127,45 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
             {/* Backdrop */}
             {isOpen && (
                 <div 
-                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity duration-300"
+                    className="fixed inset-0 bg-black/70 z-40 transition-opacity duration-300"
                     onClick={onClose}
                 />
             )}
             
             {/* Sidebar */}
-            <div className={`fixed inset-y-0 right-0 w-80 bg-dark-card border-l border-dark-border shadow-large transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed inset-y-0 right-0 w-80 bg-[#0f0f12] border-l border-[#27272a] shadow-large transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="flex flex-col h-full">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 border-b border-dark-border bg-dark-surface">
-                        <h2 className="text-xl font-semibold text-white">User Profile</h2>
+                    <div className="flex items-center justify-between p-6 border-b border-[#27272a] bg-[#18181b]">
+                        <h2 className="text-lg font-semibold text-white">Profile</h2>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-gray-300 transition-colors"
+                            className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-[#27272a] transition-colors"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex-1 overflow-y-auto p-6 ui-scrollbar">
                         {/* User Info */}
                         <div className="mb-6">
                             <div className="flex items-center space-x-4 mb-6">
-                                <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold border-2 border-dark-border shadow-lg">
+                                <div className="w-16 h-16 bg-[#18181b] border border-[#27272a] rounded-full flex items-center justify-center text-white text-xl font-semibold">
                                     {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="text-xl font-bold text-white mb-1">
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="text-lg font-semibold text-white truncate">
                                         {user.displayName || 'User'}
                                     </h3>
-                                    <p className="text-sm text-gray-400">{user.email}</p>
+                                    <p className="text-sm text-zinc-500 truncate">{user.email}</p>
                                     <div className="mt-2">
-                                        <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                                             user.emailVerified 
-                                                ? 'bg-green-900/40 text-green-300 border border-green-700/50' 
-                                                : 'bg-yellow-900/40 text-yellow-300 border border-yellow-700/50'
+                                                ? 'bg-green-500/10 text-green-500' 
+                                                : 'bg-amber-500/10 text-amber-500'
                                         }`}>
                                             {user.emailVerified ? '✓ Verified' : '⚠ Unverified'}
                                         </span>
@@ -180,21 +177,21 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
                         {/* Stats Cards */}
                         {statsLoading ? (
                             <div className="flex items-center justify-center py-8">
-                                <div className="w-6 h-6 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                                <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin"></div>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-3 mb-6">
-                                <div className="bg-dark-surface rounded-lg p-4 border border-dark-border">
-                                    <div className="text-gray-400 text-xs font-medium mb-1">Watchlists</div>
-                                    <div className="text-2xl font-bold text-white">{stats.totalWatchlists}</div>
+                                <div className="bg-[#18181b] rounded-lg p-4 border border-[#27272a]">
+                                    <div className="text-zinc-500 text-xs font-medium mb-1">Watchlists</div>
+                                    <div className="text-2xl font-semibold text-white font-mono">{stats.totalWatchlists}</div>
                                 </div>
-                                <div className="bg-dark-surface rounded-lg p-4 border border-dark-border">
-                                    <div className="text-gray-400 text-xs font-medium mb-1">Stocks Tracked</div>
-                                    <div className="text-2xl font-bold text-white">{stats.totalStocks}</div>
+                                <div className="bg-[#18181b] rounded-lg p-4 border border-[#27272a]">
+                                    <div className="text-zinc-500 text-xs font-medium mb-1">Stocks</div>
+                                    <div className="text-2xl font-semibold text-white font-mono">{stats.totalStocks}</div>
                                 </div>
-                                <div className="bg-dark-surface rounded-lg p-4 border border-dark-border col-span-2">
-                                    <div className="text-gray-400 text-xs font-medium mb-1">Account Age</div>
-                                    <div className="text-lg font-semibold text-white">
+                                <div className="bg-[#18181b] rounded-lg p-4 border border-[#27272a] col-span-2">
+                                    <div className="text-zinc-500 text-xs font-medium mb-1">Account Age</div>
+                                    <div className="text-lg font-medium text-white">
                                         {stats.accountAge > 0 ? `${stats.accountAge} day${stats.accountAge !== 1 ? 's' : ''}` : 'New Account'}
                                     </div>
                                 </div>
@@ -204,12 +201,12 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
                         {/* Top Tracked Stocks */}
                         {!statsLoading && getTopStocks().length > 0 && (
                             <div className="mb-6">
-                                <h4 className="text-sm font-semibold text-gray-300 mb-3">Most Tracked Stocks</h4>
+                                <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-3">Top Stocks</h4>
                                 <div className="flex flex-wrap gap-2">
                                     {getTopStocks().map((symbol, idx) => (
                                         <span 
                                             key={idx}
-                                            className="px-3 py-1.5 bg-dark-surface border border-dark-border rounded-lg text-sm font-medium text-white hover:bg-dark-hover transition-colors"
+                                            className="px-3 py-1.5 bg-[#18181b] border border-[#27272a] rounded-lg text-sm font-medium text-white hover:bg-[#27272a] transition-colors cursor-default"
                                         >
                                             {symbol}
                                         </span>
@@ -220,17 +217,16 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
 
                         {/* Account Details */}
                         <div className="space-y-4 mb-6">
-                            <div className="pt-4 border-t border-dark-border">
-                                <h4 className="text-sm font-semibold text-gray-300 mb-3">Account Information</h4>
+                            <div className="pt-4 border-t border-[#27272a]">
+                                <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-3">Account Info</h4>
                                 <div className="space-y-3">
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Member Since</label>
-                                        <p className="text-sm text-gray-300">{formatDate(user.metadata?.creationTime)}</p>
+                                        <label className="block text-xs text-zinc-600 mb-1">Member Since</label>
+                                        <p className="text-sm text-zinc-300">{formatDate(user.metadata?.creationTime)}</p>
                                     </div>
-
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">Last Sign In</label>
-                                        <p className="text-sm text-gray-300">{formatRelativeTime(user.metadata?.lastSignInTime)}</p>
+                                        <label className="block text-xs text-zinc-600 mb-1">Last Sign In</label>
+                                        <p className="text-sm text-zinc-300">{formatRelativeTime(user.metadata?.lastSignInTime)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -238,8 +234,8 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
 
                         {/* Watchlists Preview */}
                         {!statsLoading && watchlists.length > 0 && (
-                            <div className="pt-4 border-t border-dark-border">
-                                <h4 className="text-sm font-semibold text-gray-300 mb-3">Your Watchlists</h4>
+                            <div className="pt-4 border-t border-[#27272a]">
+                                <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-3">Your Watchlists</h4>
                                 <div className="space-y-2">
                                     {watchlists.slice(0, 3).map((watchlist) => (
                                         <button
@@ -248,16 +244,16 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
                                                 onClose()
                                                 navigate(`/watchlists?watchlist=${watchlist.id}`)
                                             }}
-                                            className="w-full bg-dark-surface rounded-lg p-3 border border-dark-border hover:bg-dark-hover transition-colors text-left cursor-pointer"
+                                            className="w-full bg-[#18181b] rounded-lg p-3 border border-[#27272a] hover:bg-[#27272a] hover:border-[#3f3f46] transition-all text-left cursor-pointer"
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div>
                                                     <div className="text-sm font-medium text-white">{watchlist.name}</div>
-                                                    <div className="text-xs text-gray-400 mt-0.5">
+                                                    <div className="text-xs text-zinc-500 mt-0.5">
                                                         {watchlist.items?.length || 0} stock{watchlist.items?.length !== 1 ? 's' : ''}
                                                     </div>
                                                 </div>
-                                                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg className="w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                                 </svg>
                                             </div>
@@ -269,7 +265,7 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
                                                 onClose()
                                                 navigate('/watchlists')
                                             }}
-                                            className="w-full text-xs text-gray-400 hover:text-gray-300 text-center pt-1 transition-colors"
+                                            className="w-full text-xs text-zinc-500 hover:text-zinc-400 text-center pt-1 transition-colors"
                                         >
                                             +{watchlists.length - 3} more watchlist{watchlists.length - 3 !== 1 ? 's' : ''}
                                         </button>
@@ -280,9 +276,9 @@ export default function UserPersonaSidebar({ isOpen, onClose }) {
                     </div>
 
                     {/* Footer */}
-                    <div className="p-6 border-t border-dark-border bg-dark-surface">
-                        <div className="text-center text-sm text-gray-500">
-                            <p>Stonklytics User Profile</p>
+                    <div className="p-4 border-t border-[#27272a] bg-[#18181b]">
+                        <div className="text-center text-xs text-zinc-600">
+                            Stonklytics Profile
                         </div>
                     </div>
                 </div>

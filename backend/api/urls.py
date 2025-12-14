@@ -16,6 +16,7 @@ urlpatterns = [
     path("signup", views_legacy.signup_view, name="signup"),
     path("profile", views_legacy.get_profile, name="get-profile"),
     path("chat", views_legacy.chat_view, name="chat"),
+    path("market-news", views_legacy.market_news_view, name="market-news"),
 
     # ------------------------
     # Legacy Watchlist Endpoints (for frontend compatibility)

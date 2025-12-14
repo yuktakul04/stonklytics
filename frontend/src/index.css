@@ -1,101 +1,419 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   STONKLYTICS - Clean Matte Trading Design
+   Minimal, professional, single-color aesthetic
+═══════════════════════════════════════════════════════════════════════════ */
+
 @layer base {
-  body {
-    @apply bg-[#0A0A0A] text-gray-100 antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  :root {
+    /* Matte dark palette - no gradients */
+    --bg-primary: #09090b;
+    --bg-secondary: #0f0f12;
+    --bg-tertiary: #18181b;
+    --bg-elevated: #1f1f23;
+    --bg-hover: #27272a;
+    
+    /* Borders */
+    --border-subtle: #27272a;
+    --border-default: #3f3f46;
+    
+    /* Text */
+    --text-primary: #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+    --text-dim: #52525b;
+    
+    /* Accent - single blue tone */
+    --accent: #3b82f6;
+    --accent-muted: #1d4ed8;
+    
+    /* Semantic */
+    --positive: #22c55e;
+    --negative: #ef4444;
   }
 
   html {
     scroll-behavior: smooth;
   }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(59, 130, 246, 0.3);
+  }
+
+  /* Clean scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-default);
+  }
+}
+
+@layer components {
+  /* ═══════════════════════════════════════════════════════════════════════════
+     CARD COMPONENTS
+  ═══════════════════════════════════════════════════════════════════════════ */
+  
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+  }
+
+  .card-hover:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-default);
+  }
+
+  /* Legacy ui-card support */
+  .ui-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     INPUT COMPONENTS
+  ═══════════════════════════════════════════════════════════════════════════ */
+  
+  .input {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: all 0.15s;
+    width: 100%;
+  }
+
+  .input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  /* Legacy ui-input support */
+  .ui-input {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: all 0.15s;
+    width: 100%;
+  }
+
+  .ui-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .ui-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     BUTTON COMPONENTS
+  ═══════════════════════════════════════════════════════════════════════════ */
+  
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.15s;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-muted);
+  }
+
+  .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border-color: var(--border-default);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 8px;
+  }
+
+  .btn-ghost:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .btn-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  /* Legacy ui-btn support */
+  .ui-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.15s;
+    cursor: pointer;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .ui-btn:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border-color: var(--border-default);
+  }
+
+  .ui-btn-primary {
+    background: var(--accent) !important;
+    color: white !important;
+    border: none !important;
+  }
+
+  .ui-btn-primary:hover {
+    background: var(--accent-muted) !important;
+  }
+
+  .ui-btn-ghost {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border: none !important;
+    padding: 8px;
+  }
+
+  .ui-btn-ghost:hover {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .ui-btn-danger {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    border: 1px solid var(--border-subtle) !important;
+  }
+
+  .ui-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #ef4444 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     BACKGROUND & SURFACE CLASSES (Legacy Support)
+  ═══════════════════════════════════════════════════════════════════════════ */
+
+  .bg-dark-bg {
+    background-color: var(--bg-primary);
+  }
+
+  .bg-dark-card {
+    background-color: var(--bg-secondary);
+  }
+
+  .bg-dark-surface {
+    background-color: var(--bg-tertiary);
+  }
+
+  .bg-dark-hover {
+    background-color: var(--bg-hover);
+  }
+
+  .hover\:bg-dark-hover:hover {
+    background-color: var(--bg-hover);
+  }
+
+  .border-dark-border {
+    border-color: var(--border-subtle);
+  }
+
+  .hover\:border-dark-border:hover {
+    border-color: var(--border-default);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     SHADOW CLASSES
+  ═══════════════════════════════════════════════════════════════════════════ */
+
+  .shadow-large {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TYPOGRAPHY
+  ═══════════════════════════════════════════════════════════════════════════ */
+  
+  .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  .text-positive { color: var(--positive); }
+  .text-negative { color: var(--negative); }
+  .text-muted { color: var(--text-muted); }
+  .text-secondary { color: var(--text-secondary); }
+
+  .ui-muted {
+    color: var(--text-muted);
+  }
+
+  .ui-title {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     SCROLLBAR FOR SPECIFIC ELEMENTS
+  ═══════════════════════════════════════════════════════════════════════════ */
+
+  .ui-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .ui-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .ui-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 3px;
+  }
+
+  .ui-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--border-default);
+  }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /* ═══════════════════════════════════════════════════════════════════════════
+     ANIMATIONS
+  ═══════════════════════════════════════════════════════════════════════════ */
+
+  .animate-in {
+    animation: fadeIn 0.2s ease-out;
   }
-  
-  .glass-effect {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
   }
-  
-  .card-hover {
-    @apply transition-all duration-300 hover:shadow-2xl hover:shadow-black/20 hover:-translate-y-0.5;
+
+  .animate-slide-up {
+    animation: slideUp 0.25s ease-out;
   }
-  
-  .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-gray-100 to-gray-400;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }
 
-/* React DatePicker Dark Theme Styles */
+/* ═══════════════════════════════════════════════════════════════════════════
+   REACT DATEPICKER THEME OVERRIDE
+═══════════════════════════════════════════════════════════════════════════ */
+
 .react-datepicker {
-  background-color: #1F2937 !important;
-  border: 1px solid #374151 !important;
+  font-family: 'Inter', sans-serif !important;
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-subtle) !important;
   border-radius: 8px !important;
-  font-family: inherit !important;
 }
 
 .react-datepicker__header {
-  background-color: #111827 !important;
-  border-bottom: 1px solid #374151 !important;
+  background: var(--bg-secondary) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
 }
 
-.react-datepicker__current-month {
-  color: #F3F4F6 !important;
-}
-
+.react-datepicker__current-month,
 .react-datepicker__day-name {
-  color: #9CA3AF !important;
+  color: var(--text-secondary) !important;
 }
 
 .react-datepicker__day {
-  color: #E5E7EB !important;
+  color: var(--text-primary) !important;
+  border-radius: 4px !important;
 }
 
 .react-datepicker__day:hover {
-  background-color: #374151 !important;
-  color: #FFFFFF !important;
+  background: var(--bg-hover) !important;
 }
 
 .react-datepicker__day--selected {
-  background-color: #3B82F6 !important;
-  color: #FFFFFF !important;
-}
-
-.react-datepicker__day--keyboard-selected {
-  background-color: #374151 !important;
-  color: #FFFFFF !important;
+  background: var(--accent) !important;
 }
 
 .react-datepicker__day--disabled {
-  color: #4B5563 !important;
+  color: var(--text-dim) !important;
 }
 
 .react-datepicker__navigation-icon::before {
-  border-color: #9CA3AF !important;
-}
-
-.react-datepicker__month {
-  background-color: #1F2937 !important;
-}
-
-.react-datepicker__time-container {
-  background-color: #1F2937 !important;
-  border-left: 1px solid #374151 !important;
-}
-
-.react-datepicker__time-list-item {
-  color: #E5E7EB !important;
-}
-
-.react-datepicker__time-list-item:hover {
-  background-color: #374151 !important;
+  border-color: var(--text-muted) !important;
 }

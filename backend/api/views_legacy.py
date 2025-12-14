@@ -426,3 +426,101 @@ Remember: Your goal is to have a CONVERSATION, not to deliver a lecture. Guide u
             {"error": f"Failed to get response from AI: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@firebase_auth_required
+@api_view(['GET'])
+def market_news_view(request):
+    """
+    AI-generated market news using Gemini.
+    Returns top market news and insights without calling external stock APIs.
+    """
+    try:
+        # Get API key from environment
+        api_key = os.environ.get('GEMINI_API_KEY')
+        if not api_key:
+            return Response(
+                {"error": "Gemini API key not configured."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # Initialize the Gemini client
+        client = genai.Client()
+        
+        # Get current date for context
+        from datetime import datetime
+        current_date = datetime.now().strftime("%B %d, %Y")
+        
+        # Prompt for generating market news
+        current_time = datetime.now().strftime("%I:%M %p")
+        prompt = f"""You are a financial news analyst. Generate a brief market news summary for today ({current_date}).
+
+Provide exactly 5 news items in the following JSON format. Each item should be a real, plausible market news headline with a brief description based on current market trends and events.
+
+Return ONLY valid JSON, no markdown, no code blocks, just the raw JSON array:
+
+[
+  {{
+    "id": 1,
+    "headline": "Brief news headline here",
+    "summary": "2-3 sentence summary of the news and its market impact",
+    "category": "one of: Markets, Tech, Economy, Earnings, Crypto, Energy, Healthcare",
+    "sentiment": "one of: positive, negative, neutral",
+    "time": "time in format like '2 hours ago', '45 minutes ago', '1 hour ago', 'Just now' - vary these realistically"
+  }}
+]
+
+Focus on major market movements, tech stocks, economic indicators, notable earnings, and global market trends. Make them realistic and relevant to current market conditions. The current time is {current_time}."""
+
+        # Generate content
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        
+        # Extract response text
+        response_text = ""
+        if hasattr(response, 'text'):
+            response_text = response.text
+        elif hasattr(response, 'candidates') and response.candidates:
+            response_text = response.candidates[0].content.parts[0].text
+        else:
+            response_text = str(response)
+        
+        # Clean up response - remove markdown code blocks if present
+        response_text = response_text.strip()
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.startswith('```'):
+            response_text = response_text[3:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+        
+        # Parse JSON response
+        try:
+            news_items = json.loads(response_text)
+        except json.JSONDecodeError:
+            # If parsing fails, return a default response
+            news_items = [{
+                "id": 1,
+                "headline": "Market Update",
+                "summary": "Unable to generate news at this time. Please try again later.",
+                "category": "Markets",
+                "sentiment": "neutral"
+            }]
+        
+        return Response({
+            "news": news_items,
+            "generated_at": current_date,
+            "source": "ai_generated"
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Market news error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return Response(
+            {"error": f"Failed to generate market news: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

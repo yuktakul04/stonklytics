@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {
-  ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
+  ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area
 } from 'recharts'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -10,9 +10,8 @@ export default function HistoricalChart({ ticker }) {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [chartType, setChartType] = useState('combined') // 'combined' or 'candlestick'
+  const [chartType, setChartType] = useState('line')
   
-  // Default to last 30 days
   const getDefaultDates = () => {
     const toDate = new Date()
     const fromDate = new Date()
@@ -26,23 +25,16 @@ export default function HistoricalChart({ ticker }) {
 
   const fetchHistoricalData = async (from, to) => {
     if (!ticker) return
-
     setLoading(true)
     setError(null)
     
-    const fromStr = from.toISOString().split('T')[0]
-    const toStr = to.toISOString().split('T')[0]
-
     try {
+      const fromStr = from.toISOString().split('T')[0]
+      const toStr = to.toISOString().split('T')[0]
       const response = await api.get(`/stock/data/historical/?ticker=${ticker}&from=${fromStr}&to=${toStr}`)
-      if (response.data.prices && response.data.prices.length > 0) {
-        setData(response.data.prices)
-      } else {
-        setData([])
-      }
+      setData(response.data.prices?.length > 0 ? response.data.prices : [])
     } catch (err) {
-      console.error('Error fetching historical data:', err)
-      setError('Failed to load historical data')
+      setError('Failed to load chart data')
       setData([])
     } finally {
       setLoading(false)
@@ -54,230 +46,159 @@ export default function HistoricalChart({ ticker }) {
   }, [ticker, fromDate, toDate])
 
   const handleFromDateChange = (date) => {
-    if (date && date <= toDate) {
-      setFromDate(date)
-    }
+    if (date && date <= toDate) setFromDate(date)
   }
 
   const handleToDateChange = (date) => {
-    if (date && date >= fromDate) {
-      setToDate(date)
-    }
+    if (date && date >= fromDate) setToDate(date)
+  }
+
+  const handleRefresh = () => fetchHistoricalData(fromDate, toDate)
+
+  // Calculate change
+  const priceChange = data.length > 1 
+    ? ((data[data.length - 1]?.close - data[0]?.close) / data[0]?.close * 100).toFixed(2)
+    : 0
+  const isPositive = priceChange >= 0
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null
+    return (
+      <div className="px-3 py-2 rounded-lg text-xs" style={{ background: '#18181b', border: '1px solid #27272a' }}>
+        <p className="text-zinc-500 mb-1">{label}</p>
+        {payload.map((entry, i) => (
+          <div key={i} className="flex justify-between gap-4">
+            <span className="text-zinc-400">{entry.name === 'close' ? 'Price' : entry.name}</span>
+            <span className="font-mono text-white">
+              {entry.name === 'volume' ? entry.value?.toLocaleString() : `$${entry.value?.toFixed(2)}`}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   if (loading) {
     return (
-      <div className="pt-6 border-t border-dark-border">
-        <div className="flex items-center justify-center h-64">
-          <div className="w-6 h-6 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="ml-3 text-gray-400">Loading chart...</span>
+      <div className="flex items-center justify-center h-72">
+        <div className="text-center">
+          <div className="w-6 h-6 mx-auto border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin"></div>
+          <p className="text-xs text-zinc-500 mt-2">Loading chart...</p>
         </div>
       </div>
     )
   }
 
-  if (error || !data || data.length === 0) {
+  if (error || !data?.length) {
     return (
-      <div className="pt-6 border-t border-dark-border">
-        <div className="text-center py-8">
-          <p className="text-gray-500 text-sm">{error || 'No historical data available'}</p>
+      <div className="flex items-center justify-center h-72">
+        <div className="text-center">
+          <svg className="w-8 h-8 mx-auto text-zinc-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <p className="text-sm text-zinc-500">{error || 'No data available'}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="pt-6 border-t border-dark-border">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-        <h3 className="text-lg font-semibold text-white">Historical Stock Prices</h3>
+    <div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div className="flex items-center gap-3">
+          <h3 className="text-base font-semibold text-white">Price History</h3>
+          <span className={`px-2 py-0.5 text-xs font-medium rounded ${isPositive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+            {isPositive ? '+' : ''}{priceChange}%
+          </span>
+        </div>
         
-        {/* Date Pickers */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400">From:</label>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Date Range */}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs" style={{ background: '#18181b', border: '1px solid #27272a' }}>
             <DatePicker
               selected={fromDate}
               onChange={handleFromDateChange}
               maxDate={toDate}
-              dateFormat="yyyy-MM-dd"
-              className="px-3 py-1.5 bg-dark-surface border border-dark-border rounded-lg text-white text-sm focus:ring-2 focus:ring-gray-600 focus:border-dark-border outline-none"
-              wrapperClassName="date-picker-wrapper"
+              dateFormat="MMM d"
+              className="w-14 bg-transparent text-zinc-300 text-xs outline-none cursor-pointer"
             />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-400">To:</label>
+            <span className="text-zinc-600">–</span>
             <DatePicker
               selected={toDate}
               onChange={handleToDateChange}
               minDate={fromDate}
               maxDate={new Date()}
-              dateFormat="yyyy-MM-dd"
-              className="px-3 py-1.5 bg-dark-surface border border-dark-border rounded-lg text-white text-sm focus:ring-2 focus:ring-gray-600 focus:border-dark-border outline-none"
-              wrapperClassName="date-picker-wrapper"
+              dateFormat="MMM d"
+              className="w-14 bg-transparent text-zinc-300 text-xs outline-none cursor-pointer"
             />
           </div>
+
+          {/* Chart Type */}
+          <div className="flex items-center rounded-lg overflow-hidden" style={{ background: '#18181b', border: '1px solid #27272a' }}>
+            {['line', 'area', 'volume'].map((type) => (
+              <button
+                key={type}
+                onClick={() => setChartType(type)}
+                className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${chartType === type ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+
+          {/* Refresh */}
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="h-8 w-8 flex items-center justify-center rounded-lg transition-colors text-zinc-500 hover:text-white"
+            style={{ background: '#18181b', border: '1px solid #27272a' }}
+          >
+            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      {/* Chart Type Toggle */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setChartType('combined')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            chartType === 'combined'
-              ? 'bg-blue-600 text-white'
-              : 'bg-dark-surface border border-dark-border text-gray-400 hover:text-white'
-          }`}
-        >
-          Price & Volume
-        </button>
-        <button
-          onClick={() => setChartType('candlestick')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            chartType === 'candlestick'
-              ? 'bg-blue-600 text-white'
-              : 'bg-dark-surface border border-dark-border text-gray-400 hover:text-white'
-          }`}
-        >
-          Candlestick
-        </button>
+      {/* Chart */}
+      <div className="h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          {chartType === 'area' ? (
+            <ComposedChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+              <defs>
+                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity={0.2} />
+                  <stop offset="100%" stopColor={isPositive ? '#22c55e' : '#ef4444'} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+              <XAxis dataKey="date" tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} domain={['auto', 'auto']} />
+              <Tooltip content={<CustomTooltip />} />
+              <Area type="monotone" dataKey="close" stroke={isPositive ? '#22c55e' : '#ef4444'} strokeWidth={2} fill="url(#areaGradient)" name="close" />
+            </ComposedChart>
+          ) : chartType === 'volume' ? (
+            <ComposedChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+              <XAxis dataKey="date" tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} />
+              <YAxis yAxisId="price" tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} domain={['auto', 'auto']} />
+              <YAxis yAxisId="volume" orientation="right" tick={{ fill: '#52525b', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1e6 ? `${(v/1e6).toFixed(0)}M` : v} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar yAxisId="volume" dataKey="volume" fill="#3f3f46" radius={[2, 2, 0, 0]} name="volume" />
+              <Line yAxisId="price" type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2} dot={false} name="close" />
+            </ComposedChart>
+          ) : (
+            <ComposedChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+              <XAxis dataKey="date" tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} domain={['auto', 'auto']} />
+              <Tooltip content={<CustomTooltip />} />
+              <Line type="monotone" dataKey="close" stroke={isPositive ? '#22c55e' : '#ef4444'} strokeWidth={2} dot={false} name="close" />
+            </ComposedChart>
+          )}
+        </ResponsiveContainer>
       </div>
-
-      {/* Combined Chart (Line + Bar) */}
-      {chartType === 'combined' && (
-        <ResponsiveContainer width="100%" height={400}>
-          <ComposedChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis 
-              dataKey="date" 
-              stroke="#9CA3AF"
-              style={{ fontSize: '12px' }}
-              tick={{ fill: '#9CA3AF' }}
-            />
-            <YAxis 
-              yAxisId="price"
-              domain={['auto', 'auto']}
-              stroke="#3B82F6"
-              style={{ fontSize: '12px' }}
-              tick={{ fill: '#3B82F6' }}
-              label={{ value: 'Price ($)', angle: -90, position: 'insideLeft', style: { fill: '#3B82F6' } }}
-            />
-            <YAxis 
-              yAxisId="volume"
-              orientation="right"
-              domain={[0, 'auto']}
-              stroke="#6B7280"
-              style={{ fontSize: '12px' }}
-              tick={{ fill: '#6B7280' }}
-              label={{ value: 'Volume', angle: 90, position: 'insideRight', style: { fill: '#6B7280' } }}
-            />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1F2937', 
-                border: '1px solid #374151',
-                borderRadius: '8px',
-                color: '#F3F4F6'
-              }}
-              formatter={(value, name) => {
-                if (name === 'close') return [`$${value.toFixed(2)}`, 'Close Price']
-                if (name === 'volume') return [value.toLocaleString(), 'Volume']
-                return [value, name]
-              }}
-            />
-            <Bar 
-              yAxisId="volume"
-              dataKey="volume" 
-              fill="#6B7280" 
-              opacity={0.6}
-              name="volume"
-            />
-            <Line 
-              yAxisId="price"
-              type="monotone" 
-              dataKey="close" 
-              stroke="#3B82F6" 
-              strokeWidth={2} 
-              dot={false}
-              activeDot={{ r: 4 }}
-              name="close"
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      )}
-
-      {/* Candlestick Chart - OHLC visualization with lines */}
-      {chartType === 'candlestick' && (
-        <ResponsiveContainer width="100%" height={400}>
-          <ComposedChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis 
-              dataKey="date" 
-              stroke="#9CA3AF"
-              style={{ fontSize: '12px' }}
-              tick={{ fill: '#9CA3AF' }}
-            />
-            <YAxis 
-              domain={['auto', 'auto']}
-              stroke="#9CA3AF"
-              style={{ fontSize: '12px' }}
-              tick={{ fill: '#9CA3AF' }}
-              label={{ value: 'Price ($)', angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
-            />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1F2937', 
-                border: '1px solid #374151',
-                borderRadius: '8px',
-                color: '#F3F4F6'
-              }}
-              formatter={(value, name) => {
-                if (name === 'open') return [`$${value.toFixed(2)}`, 'Open']
-                if (name === 'high') return [`$${value.toFixed(2)}`, 'High']
-                if (name === 'low') return [`$${value.toFixed(2)}`, 'Low']
-                if (name === 'close') return [`$${value.toFixed(2)}`, 'Close']
-                return [value, name]
-              }}
-            />
-            {/* High price line */}
-            <Line 
-              type="monotone" 
-              dataKey="high" 
-              stroke="#10B981" 
-              strokeWidth={1.5}
-              dot={{ fill: '#10B981', r: 2 }}
-              name="high"
-            />
-            {/* Low price line */}
-            <Line 
-              type="monotone" 
-              dataKey="low" 
-              stroke="#EF4444" 
-              strokeWidth={1.5}
-              dot={{ fill: '#EF4444', r: 2 }}
-              name="low"
-            />
-            {/* Open price line */}
-            <Line 
-              type="monotone" 
-              dataKey="open" 
-              stroke="#F59E0B" 
-              strokeWidth={2}
-              dot={{ fill: '#F59E0B', r: 3 }}
-              strokeDasharray="5 5"
-              name="open"
-            />
-            {/* Close price line */}
-            <Line 
-              type="monotone" 
-              dataKey="close" 
-              stroke="#3B82F6" 
-              strokeWidth={2}
-              dot={{ fill: '#3B82F6', r: 3 }}
-              name="close"
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      )}
     </div>
   )
 }

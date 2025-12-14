@@ -27,7 +27,7 @@ export default function HistoricalChart({ ticker }) {
     if (!ticker) return
     setLoading(true)
     setError(null)
-    
+
     try {
       const fromStr = from.toISOString().split('T')[0]
       const toStr = to.toISOString().split('T')[0]
@@ -51,7 +51,7 @@ export default function HistoricalChart({ ticker }) {
 
   const handleToDateChange = (date) => {
     if (date && date >= fromDate) setToDate(date)
-  }
+    }
 
   const handleRefresh = () => fetchHistoricalData(fromDate, toDate)
 
@@ -132,23 +132,23 @@ export default function HistoricalChart({ ticker }) {
               dateFormat="MMM d"
               className="w-14 bg-transparent text-zinc-300 text-xs outline-none cursor-pointer"
             />
-          </div>
+      </div>
 
           {/* Chart Type */}
           <div className="flex items-center rounded-lg overflow-hidden" style={{ background: '#18181b', border: '1px solid #27272a' }}>
             {['line', 'area', 'volume'].map((type) => (
-              <button
+        <button
                 key={type}
                 onClick={() => setChartType(type)}
                 className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${chartType === type ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
-              >
+        >
                 {type}
-              </button>
+        </button>
             ))}
           </div>
 
           {/* Refresh */}
-          <button
+        <button
             onClick={handleRefresh}
             disabled={loading}
             className="h-8 w-8 flex items-center justify-center rounded-lg transition-colors text-zinc-500 hover:text-white"
@@ -157,7 +157,7 @@ export default function HistoricalChart({ ticker }) {
             <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-          </button>
+        </button>
         </div>
       </div>
 
@@ -195,7 +195,7 @@ export default function HistoricalChart({ ticker }) {
               <YAxis tick={{ fill: '#71717a', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} domain={['auto', 'auto']} />
               <Tooltip content={<CustomTooltip />} />
               <Line type="monotone" dataKey="close" stroke={isPositive ? '#22c55e' : '#ef4444'} strokeWidth={2} dot={false} name="close" />
-            </ComposedChart>
+          </ComposedChart>
           )}
         </ResponsiveContainer>
       </div>

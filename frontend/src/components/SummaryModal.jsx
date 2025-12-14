@@ -50,29 +50,29 @@ export default function SummaryModal({ open, onClose, symbol, summary, source, l
             </div>
           )}
 
-          {!loading && !error && (
-            <>
+        {!loading && !error && (
+          <>
               <div className="prose prose-invert max-w-none">
                 <p className="whitespace-pre-wrap leading-relaxed text-zinc-300 text-sm">{summary}</p>
               </div>
 
-              {source && (
+            {source && (
                 <div className="mt-5 flex items-center justify-between gap-3 pt-4 border-t border-[#27272a]">
                   <span className="text-xs text-zinc-600">Source</span>
-                  <span
+                <span
                     className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
-                      source === "cache"
+                    source === "cache"
                         ? "bg-amber-500/10 text-amber-500"
                         : "bg-green-500/10 text-green-500"
-                    }`}
-                    title={source === "cache" ? "Served from cache" : "Freshly generated"}
-                  >
-                    {source === "cache" ? "cached" : "live"}
-                  </span>
-                </div>
-              )}
-            </>
-          )}
+                  }`}
+                  title={source === "cache" ? "Served from cache" : "Freshly generated"}
+                >
+                  {source === "cache" ? "cached" : "live"}
+                </span>
+              </div>
+            )}
+          </>
+        )}
         </div>
 
         {/* Footer */}
